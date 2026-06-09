@@ -1,0 +1,1383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Free Earning</title>
+
+<!-- Core SDKs -->
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://unpkg.com/lucide@latest"></script>
+
+<style>
+  /* ── Reset & Base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; user-select: none; }
+  html, body { width: 100%; height: 100%; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+  body { background: #020617; color: #e2e8f0; }
+
+  /* ── CSS Variables ── */
+  :root {
+    --gold:         #F59E0B;
+    --gold-bright:  #FCD34D;
+    --gold-dim:     #92400E;
+    --gold-glow:    rgba(245,158,11,0.4);
+    --blue:         #3B82F6;
+    --blue-dim:     #1E3A5F;
+    --violet:       #7C3AED;
+    --green:        #10B981;
+    --red:          #EF4444;
+    --surface:      #0F172A;
+    --surface2:     #1E293B;
+    --surface3:     #334155;
+    --border:       rgba(148,163,184,0.12);
+    --radius:       16px;
+    --radius-sm:    10px;
+  }
+
+  /* ── Scrollbar ── */
+  ::-webkit-scrollbar { width: 3px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(148,163,184,0.2); border-radius: 2px; }
+
+  /* ── Layout Shell ── */
+  #shell {
+    position: fixed; inset: 0;
+    display: flex; flex-direction: column;
+    max-width: 430px; margin: 0 auto;
+    overflow: hidden;
+  }
+
+  /* ── Header ── */
+  #header {
+    flex-shrink: 0;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 16px 10px;
+    background: rgba(2,6,23,0.92);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    z-index: 20;
+  }
+  .hdr-brand { font-size: 18px; font-weight: 800; letter-spacing: -0.3px; }
+  .hdr-brand span.g { color: var(--gold); text-shadow: 0 0 14px var(--gold-glow); }
+  .hdr-user { display: flex; align-items: center; gap: 7px; }
+  .hdr-avatar {
+    width: 32px; height: 32px; border-radius: 50%;
+    background: linear-gradient(135deg, #1e3a5f, #0f172a);
+    border: 1.5px solid var(--gold-dim);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700; color: var(--gold);
+    overflow: hidden; flex-shrink: 0;
+    box-shadow: 0 0 10px rgba(245,158,11,0.2);
+  }
+  .hdr-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+  .hdr-uname { font-size: 12px; font-weight: 600; color: #cbd5e1; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .hdr-settings-btn {
+    width: 32px; height: 32px; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer; transition: background 0.2s;
+  }
+  .hdr-settings-btn:active { background: var(--surface3); }
+
+  /* ── Tabs ── */
+  #tab-pages { flex: 1; overflow: hidden; position: relative; }
+  .tab-page { position: absolute; inset: 0; overflow-y: auto; padding: 16px 16px 100px; display: none; flex-direction: column; }
+  .tab-page.active { display: flex; }
+
+  /* ── Bottom Nav ── */
+  #bottom-nav {
+    flex-shrink: 0;
+    display: flex; align-items: stretch;
+    background: rgba(15,23,42,0.96);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    z-index: 20;
+  }
+  .nav-btn {
+    flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 3px; padding: 8px 4px 10px; cursor: pointer;
+    transition: all 0.2s ease;
+    border: none; background: none; color: #64748b;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav-btn.active { color: var(--gold); }
+  .nav-btn .nav-label { font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .nav-btn i { width: 20px; height: 20px; }
+  .nav-btn.active i { filter: drop-shadow(0 0 4px var(--gold-glow)); }
+
+  /* ── Balance Bar ── */
+  .balance-bar {
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    padding: 14px 16px 10px;
+    flex-shrink: 0;
+  }
+  .balance-icon { font-size: 26px; filter: drop-shadow(0 0 8px rgba(245,158,11,0.5)); }
+  .balance-value {
+    font-size: 36px; font-weight: 900; letter-spacing: -1px;
+    color: var(--gold-bright);
+    text-shadow: 0 0 20px rgba(245,158,11,0.4);
+    font-variant-numeric: tabular-nums;
+    transition: transform 0.12s ease;
+  }
+  .balance-value.bump { transform: scale(1.08); }
+
+  /* ── Coin Tapper ── */
+  .coin-wrap {
+    display: flex; align-items: center; justify-content: center;
+    position: relative; flex: 1; min-height: 220px;
+  }
+  .coin-ring-outer {
+    position: absolute; border-radius: 50%;
+    border: 1.5px solid rgba(245,158,11,0.12);
+    pointer-events: none; animation: ring-spin 14s linear infinite;
+  }
+  .coin-ring-outer:nth-child(2) { width: 220px; height: 220px; animation-duration: 10s; border-color: rgba(245,158,11,0.18); }
+  .coin-ring-outer:nth-child(3) { width: 252px; height: 252px; animation-duration: 18s; animation-direction: reverse; }
+  .coin-ring-outer:nth-child(4) { width: 284px; height: 284px; animation-duration: 25s; border-color: rgba(59,130,246,0.08); }
+
+  @keyframes ring-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+  .coin-btn {
+    position: relative; z-index: 2;
+    width: 162px; height: 162px; border-radius: 50%;
+    background: conic-gradient(from 0deg, #92400E 0deg, #F59E0B 60deg, #FCD34D 120deg, #F59E0B 180deg, #92400E 240deg, #F59E0B 300deg, #92400E 360deg);
+    border: none; outline: none; cursor: pointer;
+    box-shadow: 0 0 0 5px rgba(245,158,11,0.1), 0 0 30px rgba(245,158,11,0.28), 0 0 70px rgba(245,158,11,0.1), inset 0 5px 18px rgba(255,255,255,0.22), inset 0 -5px 18px rgba(0,0,0,0.4);
+    transition: transform 0.08s ease, box-shadow 0.08s ease;
+    display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+    animation: coin-float 4s ease-in-out infinite;
+  }
+  @keyframes coin-float { 0%,100%{transform:translateY(0) rotate(0deg)} 33%{transform:translateY(-5px) rotate(1.5deg)} 66%{transform:translateY(3px) rotate(-1deg)} }
+  .coin-btn.tapping { animation: none; transform: scale(0.92); box-shadow: 0 0 0 6px rgba(245,158,11,0.22), 0 0 50px rgba(245,158,11,0.5), 0 0 90px rgba(245,158,11,0.18), inset 0 5px 18px rgba(255,255,255,0.28), inset 0 -5px 18px rgba(0,0,0,0.5); }
+  .coin-btn.no-energy { animation: none; filter: grayscale(0.65) brightness(0.6); cursor: not-allowed; }
+
+  .coin-face {
+    width: 118px; height: 118px; border-radius: 50%;
+    background: radial-gradient(circle at 32% 32%, #FEF9C3, #F59E0B 45%, #92400E 80%, #451A03);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: inset 0 4px 14px rgba(255,255,255,0.38), inset 0 -4px 14px rgba(0,0,0,0.35);
+    position: relative; overflow: hidden; pointer-events: none;
+  }
+  .coin-symbol { font-size: 50px; line-height: 1; pointer-events: none; }
+  .coin-shine { position: absolute; top: 9px; left: 20px; width: 38px; height: 18px; background: radial-gradient(ellipse, rgba(255,255,255,0.48), transparent); border-radius: 50%; transform: rotate(-28deg); }
+  .boost-badge {
+    position: absolute; top: -6px; right: -6px; z-index: 3;
+    background: var(--violet); color: white; font-size: 10px; font-weight: 800;
+    padding: 3px 7px; border-radius: 10px; letter-spacing: 0.5px;
+    box-shadow: 0 0 12px rgba(124,58,237,0.6); display: none;
+  }
+  .boost-badge.visible { display: block; }
+
+  /* ── Floating +1 ── */
+  .float-point {
+    position: fixed; pointer-events: none; z-index: 9999;
+    font-size: 20px; font-weight: 800; color: var(--gold-bright);
+    text-shadow: 0 0 10px rgba(245,158,11,0.7);
+    animation: float-up 0.85s ease forwards;
+    white-space: nowrap;
+  }
+  @keyframes float-up { 0%{opacity:1;transform:translateY(0) scale(1)} 55%{opacity:1;transform:translateY(-52px) scale(1.12)} 100%{opacity:0;transform:translateY(-88px) scale(0.75)} }
+
+  /* ── Energy Bar ── */
+  .energy-wrap { padding: 0 4px; flex-shrink: 0; }
+  .energy-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .energy-label { font-size: 11px; color: #64748b; letter-spacing: 1px; text-transform: uppercase; display: flex; align-items: center; gap: 5px; }
+  .energy-label span.e { color: #38BDF8; }
+  .energy-count { font-size: 12px; font-weight: 700; color: #38BDF8; font-variant-numeric: tabular-nums; text-shadow: 0 0 8px rgba(56,189,248,0.4); }
+  .energy-track { height: 8px; background: rgba(56,189,248,0.08); border: 1px solid rgba(56,189,248,0.15); border-radius: 4px; overflow: hidden; }
+  .energy-fill { height: 100%; border-radius: 4px; background: linear-gradient(90deg, #0EA5E9, #38BDF8, #7DD3FC); box-shadow: 0 0 8px rgba(56,189,248,0.4); transition: width 0.4s cubic-bezier(.25,.46,.45,.94); position: relative; }
+  .energy-fill::after { content:''; position:absolute; top:0; right:0; width:24px; height:100%; background: linear-gradient(90deg,transparent,rgba(255,255,255,0.3)); border-radius: 0 4px 4px 0; }
+  .regen-note { font-size: 10px; color: #475569; margin-top: 4px; text-align: right; }
+  .regen-note b { color: #38BDF8; }
+
+  /* ── Tap Multiplier HUD ── */
+  .boost-hud {
+    display: none; align-items: center; justify-content: center; gap: 8px;
+    background: rgba(124,58,237,0.12); border: 1px solid rgba(124,58,237,0.3);
+    border-radius: var(--radius-sm); padding: 8px 14px; margin: 8px 0;
+    flex-shrink: 0;
+  }
+  .boost-hud.visible { display: flex; }
+  .boost-hud-icon { font-size: 16px; }
+  .boost-hud-text { font-size: 13px; font-weight: 700; color: #A78BFA; }
+  .boost-hud-timer { font-size: 13px; font-weight: 800; color: #C4B5FD; font-variant-numeric: tabular-nums; min-width: 28px; }
+
+  /* ── Section Header ── */
+  .section-title { font-size: 13px; font-weight: 700; color: #64748b; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 12px; display: flex; align-items: center; gap: 6px; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+  .card-title { font-size: 14px; font-weight: 700; color: #e2e8f0; margin-bottom: 4px; }
+  .card-desc { font-size: 12px; color: #64748b; margin-bottom: 12px; line-height: 1.5; }
+  .card-reward { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 700; color: var(--gold); background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); border-radius: 20px; padding: 3px 10px; margin-bottom: 12px; }
+
+  /* ── Buttons ── */
+  .btn {
+    width: 100%; padding: 13px 16px; border-radius: var(--radius-sm);
+    font-size: 13px; font-weight: 700; letter-spacing: 0.4px;
+    border: none; outline: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center; gap: 7px;
+    transition: all 0.18s ease; position: relative; overflow: hidden;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:disabled { opacity: 0.38; cursor: not-allowed; transform: none !important; }
+  .btn-gold {
+    background: linear-gradient(135deg, #B45309, #F59E0B, #FCD34D);
+    color: #451A03;
+    box-shadow: 0 0 18px rgba(245,158,11,0.3);
+  }
+  .btn-gold:not(:disabled):hover { box-shadow: 0 0 28px rgba(245,158,11,0.5); }
+  .btn-blue {
+    background: linear-gradient(135deg, #1D4ED8, #3B82F6);
+    color: white;
+    box-shadow: 0 0 14px rgba(59,130,246,0.25);
+  }
+  .btn-violet {
+    background: linear-gradient(135deg, #5B21B6, #7C3AED, #8B5CF6);
+    color: white;
+    box-shadow: 0 0 14px rgba(124,58,237,0.3);
+  }
+  .btn-green {
+    background: linear-gradient(135deg, #065F46, #10B981);
+    color: white;
+    box-shadow: 0 0 14px rgba(16,185,129,0.25);
+  }
+  .btn-outline {
+    background: transparent; color: #94A3B8;
+    border: 1px solid var(--border);
+  }
+  .btn-sm { padding: 9px 14px; font-size: 12px; }
+  .btn-loading-ring {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.25);
+    border-top-color: white;
+    animation: spin 0.7s linear infinite;
+    display: none;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Cooldown Display ── */
+  .cd-label { font-size: 11px; color: #475569; margin-top: 6px; text-align: center; }
+  .cd-label b { color: #F87171; }
+
+  /* ── Daily Calendar Grid ── */
+  .daily-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 12px; }
+  .daily-cell {
+    aspect-ratio: 1; border-radius: 8px;
+    background: var(--surface2); border: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; font-size: 10px; color: #475569;
+    position: relative;
+  }
+  .daily-cell.claimed { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.3); color: #34D399; }
+  .daily-cell.today { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.4); color: var(--gold); box-shadow: 0 0 12px rgba(245,158,11,0.15); }
+  .daily-cell.today.claimed { background: rgba(16,185,129,0.15); border-color: rgba(16,185,129,0.4); color: #34D399; }
+  .daily-cell .dc-day { font-size: 9px; font-weight: 600; opacity: 0.6; }
+  .daily-cell .dc-icon { font-size: 14px; line-height: 1; }
+  .daily-cell .dc-amt { font-size: 9px; font-weight: 700; }
+  .daily-cell.locked { opacity: 0.4; }
+
+  /* ── Tasks ── */
+  .task-item {
+    display: flex; align-items: center; gap: 12px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px;
+    margin-bottom: 8px;
+  }
+  .task-icon-wrap {
+    width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 20px;
+  }
+  .task-body { flex: 1; min-width: 0; }
+  .task-name { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+  .task-desc { font-size: 11px; color: #64748b; margin-top: 2px; }
+  .task-reward { font-size: 12px; font-weight: 800; color: var(--gold); }
+
+  /* ── Modal Overlay ── */
+  .modal-backdrop {
+    position: fixed; inset: 0; background: rgba(2,6,23,0.82);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 100; display: none; align-items: center; justify-content: center;
+    padding: 20px;
+  }
+  .modal-backdrop.open { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 20px; padding: 24px 20px;
+    width: 100%; max-width: 360px;
+    animation: modal-pop 0.3s cubic-bezier(.34,1.56,.64,1) forwards;
+  }
+  @keyframes modal-pop { from{opacity:0;transform:scale(0.82)} to{opacity:1;transform:scale(1)} }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px; }
+  .modal-title { font-size: 17px; font-weight: 800; color: #f1f5f9; }
+  .modal-close { width: 30px; height: 30px; border-radius: 8px; background: var(--surface2); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; }
+  .modal-close:active { background: var(--surface3); }
+  .modal-row { display: flex; justify-content: space-between; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .modal-row:last-child { border-bottom: none; }
+  .modal-row-label { font-size: 13px; color: #94a3b8; }
+  .modal-row-val { font-size: 13px; font-weight: 700; color: #e2e8f0; }
+
+  /* ── Toast ── */
+  #toast-area {
+    position: fixed; top: 72px; left: 50%; transform: translateX(-50%);
+    z-index: 200; display: flex; flex-direction: column; align-items: center; gap: 7px;
+    pointer-events: none; width: 320px; max-width: calc(100vw - 32px);
+  }
+  .toast {
+    background: var(--surface2); border-radius: 12px; padding: 11px 16px;
+    font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; gap: 9px;
+    animation: toast-drop 0.32s cubic-bezier(.34,1.56,.64,1) forwards;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    max-width: 100%;
+  }
+  .toast.success { border: 1px solid rgba(16,185,129,0.35); color: #34D399; }
+  .toast.error   { border: 1px solid rgba(239,68,68,0.35);  color: #F87171; }
+  .toast.info    { border: 1px solid rgba(245,158,11,0.35);  color: var(--gold); }
+  .toast.hiding  { animation: toast-hide 0.28s ease forwards; }
+  .toast-ico { font-size: 16px; flex-shrink: 0; }
+  @keyframes toast-drop { from{opacity:0;transform:translateY(-10px) scale(0.88)} to{opacity:1;transform:translateY(0) scale(1)} }
+  @keyframes toast-hide { from{opacity:1;transform:scale(1)} to{opacity:0;transform:scale(0.85)} }
+
+  /* ── Grid background ── */
+  #bg-grid {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: linear-gradient(rgba(59,130,246,0.035) 1px, transparent 1px), linear-gradient(90deg, rgba(59,130,246,0.035) 1px, transparent 1px);
+    background-size: 38px 38px;
+  }
+  #bg-glow { position: fixed; top: -100px; left: 50%; transform: translateX(-50%); width: 440px; height: 260px; background: radial-gradient(ellipse, rgba(245,158,11,0.07), transparent 70%); pointer-events: none; z-index: 0; }
+
+  /* ── Misc ── */
+  .gap-pill {
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11px; font-weight: 700;
+    padding: 3px 9px; border-radius: 20px;
+  }
+  .pill-violet { background: rgba(124,58,237,0.15); color: #A78BFA; border: 1px solid rgba(124,58,237,0.25); }
+  .pill-green  { background: rgba(16,185,129,0.12); color: #34D399; border: 1px solid rgba(16,185,129,0.22); }
+  .divider { height: 1px; background: var(--border); margin: 14px 0; }
+</style>
+</head>
+<body>
+
+<!-- Decorative BG -->
+<div id="bg-grid"></div>
+<div id="bg-glow"></div>
+
+<!-- Toast Area -->
+<div id="toast-area"></div>
+
+<!-- Settings Modal -->
+<div class="modal-backdrop" id="modal-settings">
+  <div class="modal-box">
+    <div class="modal-header">
+      <span class="modal-title">⚙️ Game Info</span>
+      <div class="modal-close" onclick="closeModal('modal-settings')">
+        <i data-lucide="x" style="width:14px;height:14px;color:#94a3b8"></i>
+      </div>
+    </div>
+    <div class="modal-row"><span class="modal-row-label">👤 Player</span><span class="modal-row-val" id="modal-uname">—</span></div>
+    <div class="modal-row"><span class="modal-row-label">🪙 Total Coins</span><span class="modal-row-val" id="modal-coins">0</span></div>
+    <div class="modal-row"><span class="modal-row-label">👆 Total Taps</span><span class="modal-row-val" id="modal-taps">0</span></div>
+    <div class="modal-row"><span class="modal-row-label">📺 Ads Watched</span><span class="modal-row-val" id="modal-ads">0</span></div>
+    <div class="modal-row"><span class="modal-row-label">🔋 Energy</span><span class="modal-row-val" id="modal-energy">—</span></div>
+    <div class="modal-row"><span class="modal-row-label">🚀 Version</span><span class="modal-row-val">1.0.0</span></div>
+    <div style="margin-top:18px">
+      <button class="btn btn-outline" onclick="closeModal('modal-settings')">Close</button>
+    </div>
+  </div>
+</div>
+
+<!-- Main Shell -->
+<div id="shell">
+
+  <!-- HEADER -->
+  <header id="header">
+    <div class="hdr-brand"><span class="g">Free</span> Earning</div>
+    <div class="hdr-user">
+      <div class="hdr-avatar" id="hdr-avatar"><span id="hdr-initials">?</span></div>
+      <span class="hdr-uname" id="hdr-uname">Loading…</span>
+    </div>
+    <div class="hdr-settings-btn" onclick="openSettings()">
+      <i data-lucide="settings" style="width:15px;height:15px;color:#94a3b8"></i>
+    </div>
+  </header>
+
+  <!-- TAB PAGES -->
+  <div id="tab-pages">
+
+    <!-- ══ TAP TAB ══ -->
+    <div class="tab-page active" id="page-tap">
+      <!-- Balance -->
+      <div class="balance-bar">
+        <span class="balance-icon">🪙</span>
+        <span class="balance-value" id="balance-disp">0</span>
+      </div>
+
+      <!-- Boost HUD -->
+      <div class="boost-hud" id="boost-hud">
+        <span class="boost-hud-icon">🚀</span>
+        <span class="boost-hud-text">2× Boost Active</span>
+        <span class="boost-hud-timer" id="boost-timer">60s</span>
+      </div>
+
+      <!-- Coin -->
+      <div class="coin-wrap" id="tapper-area">
+        <div class="coin-ring-outer" style="width:214px;height:214px"></div>
+        <div class="coin-ring-outer" style="width:248px;height:248px;border-color:rgba(59,130,246,0.09);animation-direction:reverse;animation-duration:19s"></div>
+        <div class="coin-ring-outer" style="width:280px;height:280px;animation-duration:26s"></div>
+        <button class="coin-btn" id="coin-btn" aria-label="Tap to earn coins">
+          <div class="coin-face">
+            <span class="coin-symbol">💰</span>
+            <div class="coin-shine"></div>
+          </div>
+          <span class="boost-badge" id="boost-badge">×2</span>
+        </button>
+      </div>
+
+      <!-- Energy -->
+      <div class="energy-wrap">
+        <div class="energy-header">
+          <span class="energy-label"><span class="e">⚡</span> ENERGY</span>
+          <span class="energy-count"><span id="energy-cur">500</span> / 500</span>
+        </div>
+        <div class="energy-track">
+          <div class="energy-fill" id="energy-fill" style="width:100%"></div>
+        </div>
+        <div class="regen-note">+1 energy every <b>2s</b> · auto-regen</div>
+      </div>
+    </div><!-- /page-tap -->
+
+    <!-- ══ BOOSTS TAB ══ -->
+    <div class="tab-page" id="page-boosts">
+      <div class="section-title"><i data-lucide="zap" style="width:14px;height:14px"></i> Power-Ups</div>
+
+      <!-- Refill Energy Card -->
+      <div class="card">
+        <div class="card-title">⚡ Refill Energy</div>
+        <div class="card-desc">Your energy is depleted? Watch a short ad and get 500 energy + a bonus immediately.</div>
+        <div class="card-reward">🪙 +50 Bonus Coins</div>
+        <button class="btn btn-blue" id="btn-refill" onclick="handleRefillEnergy()">
+          <span class="btn-loading-ring" id="ring-refill"></span>
+          <span id="txt-refill">⚡ Refill 500 Energy (Watch Ad)</span>
+        </button>
+        <div class="cd-label" id="cd-refill" style="display:none"></div>
+      </div>
+
+      <!-- Double Tap Booster Card -->
+      <div class="card">
+        <div class="card-title">🚀 2× Tap Multiplier</div>
+        <div class="card-desc">Watch an ad and every tap rewards 2 coins for 60 seconds. Shown in a live countdown.</div>
+        <div class="card-reward">⏱ Active for 60 seconds</div>
+        <button class="btn btn-violet" id="btn-boost" onclick="handleDoubleBoost()">
+          <span class="btn-loading-ring" id="ring-boost"></span>
+          <span id="txt-boost">🚀 2× Tap Multiplier for 60s (Watch Ad)</span>
+        </button>
+        <div class="cd-label" id="cd-boost"></div>
+      </div>
+
+      <div class="divider"></div>
+      <div class="section-title"><i data-lucide="info" style="width:14px;height:14px"></i> Tap Stats</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="card" style="text-align:center;margin-bottom:0">
+          <div style="font-size:22px;font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums" id="stat-taps">0</div>
+          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-top:3px">Total Taps</div>
+        </div>
+        <div class="card" style="text-align:center;margin-bottom:0">
+          <div style="font-size:22px;font-weight:900;color:#38BDF8;font-variant-numeric:tabular-nums" id="stat-ads">0</div>
+          <div style="font-size:10px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-top:3px">Ads Watched</div>
+        </div>
+      </div>
+    </div><!-- /page-boosts -->
+
+    <!-- ══ TASKS TAB ══ -->
+    <div class="tab-page" id="page-tasks">
+      <div class="section-title"><i data-lucide="list-checks" style="width:14px;height:14px"></i> Daily Missions</div>
+
+      <!-- Watch & Earn -->
+      <div class="task-item">
+        <div class="task-icon-wrap" style="background:rgba(245,158,11,0.12)">📺</div>
+        <div class="task-body">
+          <div class="task-name">Watch & Earn</div>
+          <div class="task-desc">Watch a sponsored ad to earn instant coins. Available every minute.</div>
+          <div class="task-reward">+500 Coins per watch</div>
+        </div>
+      </div>
+      <button class="btn btn-gold btn-sm" id="btn-watch-earn" onclick="handleWatchEarn()" style="margin-bottom:6px">
+        <span class="btn-loading-ring" id="ring-watch"></span>
+        <span id="txt-watch">📺 Watch Sponsored Ad (+500 Coins)</span>
+      </button>
+      <div class="cd-label" id="cd-watch"></div>
+
+      <div class="divider"></div>
+      <div class="section-title"><i data-lucide="target" style="width:14px;height:14px"></i> One-Time Missions</div>
+
+      <!-- Static missions (cosmetic, always shown) -->
+      <div class="task-item">
+        <div class="task-icon-wrap" style="background:rgba(59,130,246,0.12)">👆</div>
+        <div class="task-body">
+          <div class="task-name">First 100 Taps</div>
+          <div class="task-desc">Tap the coin 100 times total.</div>
+          <div class="task-reward" id="mission-100tap-reward" style="color:#64748b">0 / 100 taps</div>
+        </div>
+        <span id="mission-100tap-badge" class="gap-pill" style="display:none"></span>
+      </div>
+
+      <div class="task-item">
+        <div class="task-icon-wrap" style="background:rgba(16,185,129,0.12)">💰</div>
+        <div class="task-body">
+          <div class="task-name">Earn 1,000 Coins</div>
+          <div class="task-desc">Accumulate 1,000 coins across all sessions.</div>
+          <div class="task-reward" id="mission-1k-reward" style="color:#64748b">0 / 1,000 coins</div>
+        </div>
+        <span id="mission-1k-badge" class="gap-pill" style="display:none"></span>
+      </div>
+
+      <div class="task-item">
+        <div class="task-icon-wrap" style="background:rgba(124,58,237,0.12)">📺</div>
+        <div class="task-body">
+          <div class="task-name">Watch 5 Ads</div>
+          <div class="task-desc">Watch 5 rewarded ads in total.</div>
+          <div class="task-reward" id="mission-5ad-reward" style="color:#64748b">0 / 5 ads</div>
+        </div>
+        <span id="mission-5ad-badge" class="gap-pill" style="display:none"></span>
+      </div>
+    </div><!-- /page-tasks -->
+
+    <!-- ══ DAILY TAB ══ -->
+    <div class="tab-page" id="page-daily">
+      <div class="section-title"><i data-lucide="calendar" style="width:14px;height:14px"></i> Daily Login Rewards</div>
+
+      <!-- Calendar-style grid: 7 days -->
+      <div class="daily-grid" id="daily-grid"></div>
+
+      <!-- Claim today -->
+      <div class="card">
+        <div class="card-title">🎁 Today's Reward</div>
+        <div class="card-desc" id="daily-claim-desc">Log in every day to earn increasing rewards. Don't break your streak!</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:4px">
+          <button class="btn btn-gold" id="btn-daily-claim" onclick="handleDailyClaim()">
+            <span class="btn-loading-ring" id="ring-daily"></span>
+            <span id="txt-daily">Claim 1,000 Coins 🎁</span>
+          </button>
+          <button class="btn btn-violet" id="btn-daily-double" onclick="handleDailyDouble()">
+            <span class="btn-loading-ring" id="ring-daily-dbl"></span>
+            <span id="txt-daily-dbl">Double: 2,000 Coins 📺</span>
+          </button>
+        </div>
+        <div class="cd-label" id="cd-daily"></div>
+      </div>
+    </div><!-- /page-daily -->
+
+  </div><!-- /#tab-pages -->
+
+  <!-- BOTTOM NAV -->
+  <nav id="bottom-nav">
+    <button class="nav-btn active" id="nav-tap" onclick="switchTab('tap')">
+      <i data-lucide="hand-metal"></i>
+      <span class="nav-label">Tap</span>
+    </button>
+    <button class="nav-btn" id="nav-boosts" onclick="switchTab('boosts')">
+      <i data-lucide="zap"></i>
+      <span class="nav-label">Boosts</span>
+    </button>
+    <button class="nav-btn" id="nav-tasks" onclick="switchTab('tasks')">
+      <i data-lucide="list-checks"></i>
+      <span class="nav-label">Tasks</span>
+    </button>
+    <button class="nav-btn" id="nav-daily" onclick="switchTab('daily')">
+      <i data-lucide="calendar"></i>
+      <span class="nav-label">Daily</span>
+    </button>
+  </nav>
+
+</div><!-- /#shell -->
+
+<script>
+/* ═══════════════════════════════════════════════
+   FREE EARNING — COMPLETE GAME ENGINE
+   Full-Stack Telegram Mini App
+   Adsgram SDK · Lucide Icons · Tailwind
+═══════════════════════════════════════════════ */
+'use strict';
+
+/* ── Adsgram Block IDs — replace with your real IDs ── */
+const ADS_BLOCK_REFILL  = 'your-block-id-refill';
+const ADS_BLOCK_BOOST   = 'your-block-id-boost';
+const ADS_BLOCK_DAILY   = 'your-block-id-daily';
+const ADS_BLOCK_WATCH   = 'your-block-id-watch';
+
+/* ── Game constants ── */
+const MAX_ENERGY         = 500;
+const ENERGY_REGEN_MS    = 2000;
+const BOOST_DURATION_MS  = 60000;
+const DAILY_REWARD_BASE  = 1000;
+const WATCH_EARN_REWARD  = 500;
+const WATCH_EARN_CD_MS   = 60000;
+const REFILL_BONUS_COINS = 50;
+const REFILL_CD_MS       = 30000;
+const DAILY_REWARDS_ARR  = [100,200,300,400,500,750,1000]; /* 7-day streak values */
+
+/* ── State ── */
+let state = {
+  coins:           0,
+  energy:          MAX_ENERGY,
+  totalTaps:       0,
+  adsWatched:      0,
+  boostActive:     false,
+  boostEndTime:    0,
+  lastDailyClaim:  0,
+  dailyStreak:     0,
+  watchEarnLastTs: 0,
+  refillLastTs:    0,
+  sessionCoins:    0,
+};
+
+/* ── DOM refs ── */
+const $  = id => document.getElementById(id);
+const el = {
+  balanceDisp:  $('balance-disp'),
+  energyCur:    $('energy-cur'),
+  energyFill:   $('energy-fill'),
+  coinBtn:      $('coin-btn'),
+  boostHud:     $('boost-hud'),
+  boostTimer:   $('boost-timer'),
+  boostBadge:   $('boost-badge'),
+  statTaps:     $('stat-taps'),
+  statAds:      $('stat-ads'),
+  hdrUname:     $('hdr-uname'),
+  hdrInitials:  $('hdr-initials'),
+  hdrAvatar:    $('hdr-avatar'),
+  dailyGrid:    $('daily-grid'),
+};
+
+/* ════════════════════════════════
+   TELEGRAM INIT
+════════════════════════════════ */
+function initTelegram() {
+  const tg = window.Telegram?.WebApp;
+  if (!tg) {
+    el.hdrUname.textContent    = 'CryptoAgent';
+    el.hdrInitials.textContent = 'CA';
+    return;
+  }
+  tg.ready();
+  tg.expand();
+  if (tg.enableClosingConfirmation) tg.enableClosingConfirmation();
+
+  /* Telegram theme params — apply if available */
+  const tp = tg.themeParams || {};
+  if (tp.bg_color)      document.documentElement.style.setProperty('--tg-bg', tp.bg_color);
+  if (tp.button_color)  document.documentElement.style.setProperty('--tg-btn', tp.button_color);
+
+  const user = tg.initDataUnsafe?.user;
+  if (user) {
+    const name  = user.first_name || user.username || 'Agent';
+    const uname = user.username ? `@${user.username}` : name;
+    el.hdrUname.textContent    = uname;
+    el.hdrInitials.textContent = name.slice(0, 2).toUpperCase();
+    $('modal-uname').textContent = uname;
+
+    /* Avatar photo */
+    if (user.photo_url) {
+      const img = document.createElement('img');
+      img.src = user.photo_url;
+      img.alt = name;
+      img.onload = () => { el.hdrAvatar.innerHTML = ''; el.hdrAvatar.appendChild(img); };
+    }
+  } else {
+    el.hdrUname.textContent    = 'FreeAgent';
+    el.hdrInitials.textContent = 'FA';
+    $('modal-uname').textContent = 'FreeAgent';
+  }
+}
+
+function haptic(type = 'medium') {
+  try { window.Telegram?.WebApp?.HapticFeedback?.impactOccurred(type); } catch (_) {}
+}
+
+/* ════════════════════════════════
+   PERSISTENCE
+════════════════════════════════ */
+function saveState() {
+  try {
+    localStorage.setItem('fe_v3', JSON.stringify({
+      coins:          state.coins,
+      energy:         state.energy,
+      totalTaps:      state.totalTaps,
+      adsWatched:     state.adsWatched,
+      boostActive:    state.boostActive,
+      boostEndTime:   state.boostEndTime,
+      lastDailyClaim: state.lastDailyClaim,
+      dailyStreak:    state.dailyStreak,
+      watchEarnLastTs:state.watchEarnLastTs,
+      refillLastTs:   state.refillLastTs,
+      savedAt:        Date.now(),
+    }));
+  } catch (_) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem('fe_v3');
+    if (!raw) return;
+    const sv = JSON.parse(raw);
+    state.coins           = sv.coins           || 0;
+    state.totalTaps       = sv.totalTaps       || 0;
+    state.adsWatched      = sv.adsWatched      || 0;
+    state.boostActive     = sv.boostActive     || false;
+    state.boostEndTime    = sv.boostEndTime    || 0;
+    state.lastDailyClaim  = sv.lastDailyClaim  || 0;
+    state.dailyStreak     = sv.dailyStreak     || 0;
+    state.watchEarnLastTs = sv.watchEarnLastTs || 0;
+    state.refillLastTs    = sv.refillLastTs    || 0;
+    /* Offline energy regen */
+    const elapsed = Date.now() - (sv.savedAt || Date.now());
+    const regenned = Math.floor(elapsed / ENERGY_REGEN_MS);
+    state.energy = Math.min(MAX_ENERGY, (sv.energy || MAX_ENERGY) + regenned);
+    /* Expire boost if it ended while offline */
+    if (state.boostActive && Date.now() >= state.boostEndTime) {
+      state.boostActive  = false;
+      state.boostEndTime = 0;
+    }
+  } catch (_) {}
+}
+
+/* ════════════════════════════════
+   ADSGRAM HELPER
+════════════════════════════════ */
+function showAdsgramAd(blockId, onSuccess, onError) {
+  /* Safety: check SDK availability */
+  if (!window.Adsgram || typeof window.Adsgram.init !== 'function') {
+    /* Graceful fallback — SDK failed to load (blocked, slow connection) */
+    console.warn('[Adsgram] SDK not available. Simulating ad for dev environment.');
+    /* In production this path won't execute; in dev we simulate success after 1.5s */
+    setTimeout(() => {
+      if (typeof onSuccess === 'function') onSuccess();
+    }, 1500);
+    return;
+  }
+  let controller;
+  try {
+    controller = window.Adsgram.init({ blockId: String(blockId) });
+  } catch (e) {
+    console.error('[Adsgram] init error:', e);
+    if (typeof onError === 'function') onError({ type: 'init', message: String(e) });
+    return;
+  }
+  controller.show()
+    .then(() => { if (typeof onSuccess === 'function') onSuccess(); })
+    .catch(err => {
+      const errObj = err || {};
+      console.warn('[Adsgram] Ad not completed:', errObj);
+      if (typeof onError === 'function') onError(errObj);
+    });
+}
+
+/* Loading state helpers for ad buttons */
+function setAdLoading(ringId, txtId, loading) {
+  const ring = $(ringId);
+  const txt  = $(txtId);
+  if (!ring || !txt) return;
+  ring.style.display = loading ? 'block' : 'none';
+  txt.style.opacity  = loading ? '0.4' : '1';
+}
+
+/* ════════════════════════════════
+   BALANCE & ENERGY RENDER
+════════════════════════════════ */
+function renderBalance() {
+  el.balanceDisp.textContent = formatNum(state.coins);
+  /* Brief scale bump */
+  el.balanceDisp.classList.remove('bump');
+  void el.balanceDisp.offsetWidth;
+  el.balanceDisp.classList.add('bump');
+  setTimeout(() => el.balanceDisp.classList.remove('bump'), 150);
+  /* Sync modal */
+  $('modal-coins').textContent = formatNum(state.coins);
+}
+
+function renderEnergy() {
+  const pct = (state.energy / MAX_ENERGY) * 100;
+  el.energyCur.textContent      = state.energy;
+  el.energyFill.style.width     = pct + '%';
+  el.coinBtn.classList.toggle('no-energy', state.energy <= 0);
+  $('modal-energy').textContent = `${state.energy} / ${MAX_ENERGY}`;
+}
+
+function renderStats() {
+  el.statTaps.textContent       = formatNum(state.totalTaps);
+  el.statAds.textContent        = state.adsWatched;
+  $('modal-taps').textContent   = formatNum(state.totalTaps);
+  $('modal-ads').textContent    = state.adsWatched;
+}
+
+function formatNum(n) {
+  if (n >= 1_000_000) return (n / 1_000_000).toFixed(2) + 'M';
+  if (n >= 1_000)     return (n / 1_000).toFixed(n >= 10000 ? 1 : 2) + 'K';
+  return n.toString();
+}
+
+function renderBoostHud() {
+  if (state.boostActive && Date.now() < state.boostEndTime) {
+    const remaining = Math.ceil((state.boostEndTime - Date.now()) / 1000);
+    el.boostHud.classList.add('visible');
+    el.boostBadge.classList.add('visible');
+    el.boostTimer.textContent = remaining + 's';
+  } else {
+    el.boostHud.classList.remove('visible');
+    el.boostBadge.classList.remove('visible');
+  }
+}
+
+function renderAll() {
+  renderBalance();
+  renderEnergy();
+  renderStats();
+  renderBoostHud();
+  updateBoostButton();
+  updateWatchEarnButton();
+  updateRefillButton();
+  updateDailyButtons();
+  updateMissions();
+}
+
+/* ════════════════════════════════
+   ENERGY REGEN LOOP
+════════════════════════════════ */
+function startEnergyRegen() {
+  setInterval(() => {
+    if (state.energy < MAX_ENERGY) {
+      state.energy = Math.min(MAX_ENERGY, state.energy + 1);
+      renderEnergy();
+      updateRefillButton();
+      saveState();
+    }
+  }, ENERGY_REGEN_MS);
+}
+
+/* Boost countdown tick */
+function startBoostTicker() {
+  setInterval(() => {
+    if (state.boostActive) {
+      if (Date.now() >= state.boostEndTime) {
+        state.boostActive  = false;
+        state.boostEndTime = 0;
+        renderBoostHud();
+        updateBoostButton();
+        showToast('🚀 2× boost expired!', 'info');
+        saveState();
+      } else {
+        renderBoostHud();
+      }
+    }
+  }, 500);
+}
+
+/* Cooldown display tickers */
+function startCooldownTickers() {
+  setInterval(() => {
+    updateWatchEarnButton();
+    updateRefillButton();
+    updateDailyButtons();
+  }, 1000);
+}
+
+/* ════════════════════════════════
+   FLOATING +N TEXT
+════════════════════════════════ */
+function spawnFloat(x, y, value) {
+  const div = document.createElement('div');
+  div.className   = 'float-point';
+  div.textContent = `+${value}`;
+  div.style.left  = (x - 16 + (Math.random() * 26 - 13)) + 'px';
+  div.style.top   = (y - 20) + 'px';
+  document.body.appendChild(div);
+  setTimeout(() => div.remove(), 900);
+}
+
+/* ════════════════════════════════
+   COIN TAP HANDLER
+════════════════════════════════ */
+function attachCoinEvents() {
+  /* touchstart for zero-delay on mobile */
+  el.coinBtn.addEventListener('touchstart', handleTap, { passive: false });
+  /* fallback for desktop */
+  el.coinBtn.addEventListener('click', e => {
+    if (!('ontouchstart' in window)) handleTap(e);
+  });
+}
+
+function handleTap(e) {
+  e.preventDefault();
+  if (state.energy <= 0) {
+    showToast('⚡ No energy! Refill in Boosts tab.', 'error');
+    haptic('light');
+    return;
+  }
+
+  const tapValue = (state.boostActive && Date.now() < state.boostEndTime) ? 2 : 1;
+  state.coins      += tapValue;
+  state.energy     -= 1;
+  state.totalTaps  += 1;
+  state.sessionCoins = (state.sessionCoins || 0) + tapValue;
+
+  haptic('medium');
+
+  /* Tap animation */
+  el.coinBtn.classList.add('tapping');
+  setTimeout(() => el.coinBtn.classList.remove('tapping'), 110);
+
+  /* Floating text at touch/click position */
+  let cx, cy;
+  if (e.touches && e.touches[0]) {
+    cx = e.touches[0].clientX;
+    cy = e.touches[0].clientY;
+  } else {
+    cx = e.clientX;
+    cy = e.clientY;
+  }
+  spawnFloat(cx, cy, tapValue);
+
+  renderBalance();
+  renderEnergy();
+  renderStats();
+  updateMissions();
+  saveState();
+}
+
+/* ════════════════════════════════
+   BOOST: REFILL ENERGY
+════════════════════════════════ */
+function handleRefillEnergy() {
+  if ($('btn-refill').disabled) return;
+  haptic('medium');
+  $('btn-refill').disabled = true;
+  setAdLoading('ring-refill', 'txt-refill', true);
+
+  showAdsgramAd(
+    ADS_BLOCK_REFILL,
+    () => {
+      /* Success */
+      state.energy         = MAX_ENERGY;
+      state.coins         += REFILL_BONUS_COINS;
+      state.adsWatched    += 1;
+      state.refillLastTs   = Date.now();
+      setAdLoading('ring-refill', 'txt-refill', false);
+      renderAll();
+      saveState();
+      showToast(`⚡ Energy refilled! +${REFILL_BONUS_COINS} bonus coins.`, 'success');
+    },
+    (err) => {
+      /* Error / skip */
+      setAdLoading('ring-refill', 'txt-refill', false);
+      $('btn-refill').disabled = false;
+      const isSkip = err?.type === 'adblock' || String(err?.message || '').toLowerCase().includes('skip');
+      showToast(isSkip ? '⚠️ Ad skipped — watch fully to earn!' : '⚠️ Ad not available. Try again soon.', 'error');
+    }
+  );
+}
+
+function updateRefillButton() {
+  const btn = $('btn-refill');
+  const cdEl = $('cd-refill');
+  const now  = Date.now();
+  const elapsed = now - (state.refillLastTs || 0);
+  const cdLeft  = REFILL_CD_MS - elapsed;
+
+  if (cdLeft > 0) {
+    btn.disabled = true;
+    cdEl.style.display = 'block';
+    cdEl.innerHTML = `Available in <b>${Math.ceil(cdLeft / 1000)}s</b>`;
+  } else if (state.energy >= MAX_ENERGY) {
+    btn.disabled = true;
+    cdEl.style.display = 'block';
+    cdEl.innerHTML = `<b>Energy already full!</b>`;
+  } else {
+    btn.disabled = false;
+    cdEl.style.display = 'none';
+    setAdLoading('ring-refill', 'txt-refill', false);
+  }
+}
+
+/* ════════════════════════════════
+   BOOST: DOUBLE TAP MULTIPLIER
+════════════════════════════════ */
+function handleDoubleBoost() {
+  if ($('btn-boost').disabled) return;
+  haptic('medium');
+  $('btn-boost').disabled = true;
+  setAdLoading('ring-boost', 'txt-boost', true);
+
+  showAdsgramAd(
+    ADS_BLOCK_BOOST,
+    () => {
+      state.boostActive  = true;
+      state.boostEndTime = Date.now() + BOOST_DURATION_MS;
+      state.adsWatched  += 1;
+      setAdLoading('ring-boost', 'txt-boost', false);
+      renderAll();
+      saveState();
+      showToast('🚀 2× Tap Boost activated for 60 seconds!', 'success', 4000);
+    },
+    (err) => {
+      setAdLoading('ring-boost', 'txt-boost', false);
+      $('btn-boost').disabled = false;
+      const isSkip = String(err?.message || '').toLowerCase().includes('skip');
+      showToast(isSkip ? '⚠️ Ad skipped — watch fully to activate boost!' : '⚠️ Ad unavailable. Try again.', 'error');
+    }
+  );
+}
+
+function updateBoostButton() {
+  const btn = $('btn-boost');
+  const cdEl = $('cd-boost');
+  if (state.boostActive && Date.now() < state.boostEndTime) {
+    btn.disabled = true;
+    const rem = Math.ceil((state.boostEndTime - Date.now()) / 1000);
+    cdEl.innerHTML = `🚀 Boost running — <b>${rem}s</b> remaining`;
+  } else {
+    btn.disabled = false;
+    setAdLoading('ring-boost', 'txt-boost', false);
+    cdEl.innerHTML = '';
+  }
+}
+
+/* ════════════════════════════════
+   WATCH & EARN (TASKS)
+════════════════════════════════ */
+function handleWatchEarn() {
+  if ($('btn-watch-earn').disabled) return;
+  haptic('medium');
+  $('btn-watch-earn').disabled = true;
+  setAdLoading('ring-watch', 'txt-watch', true);
+
+  showAdsgramAd(
+    ADS_BLOCK_WATCH,
+    () => {
+      state.coins          += WATCH_EARN_REWARD;
+      state.adsWatched     += 1;
+      state.watchEarnLastTs = Date.now();
+      setAdLoading('ring-watch', 'txt-watch', false);
+      renderAll();
+      saveState();
+      showToast(`💰 +${WATCH_EARN_REWARD} coins earned! Watch again in 1 minute.`, 'success', 4000);
+    },
+    (err) => {
+      setAdLoading('ring-watch', 'txt-watch', false);
+      $('btn-watch-earn').disabled = false;
+      const isSkip = String(err?.message || '').toLowerCase().includes('skip');
+      showToast(isSkip ? '⚠️ Ad skipped — watch fully to earn coins!' : '⚠️ Ad not available. Try again soon.', 'error');
+    }
+  );
+}
+
+function updateWatchEarnButton() {
+  const btn  = $('btn-watch-earn');
+  const cdEl = $('cd-watch');
+  const now  = Date.now();
+  const elapsed = now - (state.watchEarnLastTs || 0);
+  const cdLeft  = WATCH_EARN_CD_MS - elapsed;
+
+  if (cdLeft > 0) {
+    btn.disabled = true;
+    cdEl.innerHTML = `Available in <b>${Math.ceil(cdLeft / 1000)}s</b>`;
+  } else {
+    btn.disabled = false;
+    cdEl.innerHTML = '';
+    setAdLoading('ring-watch', 'txt-watch', false);
+  }
+}
+
+/* ════════════════════════════════
+   DAILY REWARDS
+════════════════════════════════ */
+const DAILY_GRID_EMOJIS = ['🥉','🥈','🥇','💎','👑','🔥','⚡'];
+
+function buildDailyGrid() {
+  const grid = el.dailyGrid;
+  grid.innerHTML = '';
+  const now       = Date.now();
+  const todayIdx  = Math.min(state.dailyStreak, 6);
+  const claimedToday = isSameDay(state.lastDailyClaim, now);
+
+  for (let i = 0; i < 7; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'daily-cell';
+
+    const isClaimed  = i < todayIdx || (i === todayIdx && claimedToday);
+    const isToday    = i === todayIdx && !claimedToday;
+    const isLocked   = i > todayIdx;
+
+    if (isClaimed) cell.classList.add('claimed');
+    if (isToday)   cell.classList.add('today');
+    if (isLocked)  cell.classList.add('locked');
+
+    cell.innerHTML = `
+      <span class="dc-day">Day ${i + 1}</span>
+      <span class="dc-icon">${isClaimed ? '✅' : isToday ? DAILY_GRID_EMOJIS[i] : DAILY_GRID_EMOJIS[i]}</span>
+      <span class="dc-amt">${formatNum(DAILY_REWARDS_ARR[i])}</span>
+    `;
+    grid.appendChild(cell);
+  }
+}
+
+function isSameDay(ts1, ts2) {
+  if (!ts1) return false;
+  const d1 = new Date(ts1);
+  const d2 = new Date(ts2);
+  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate();
+}
+
+function isNewDay(lastTs) {
+  if (!lastTs) return true;
+  const now  = new Date();
+  const last = new Date(lastTs);
+  const diffMs = now - last;
+  const diffDays = diffMs / (1000 * 60 * 60 * 24);
+  return diffDays >= 1;
+}
+
+function getDailyRewardForToday() {
+  return DAILY_REWARDS_ARR[Math.min(state.dailyStreak, DAILY_REWARDS_ARR.length - 1)];
+}
+
+function handleDailyClaim() {
+  if ($('btn-daily-claim').disabled) return;
+  haptic('medium');
+  const reward = getDailyRewardForToday();
+  $('btn-daily-claim').disabled  = true;
+  $('btn-daily-double').disabled = true;
+
+  state.coins         += reward;
+  state.lastDailyClaim = Date.now();
+  state.dailyStreak    = Math.min(state.dailyStreak + 1, 6);
+  renderAll();
+  buildDailyGrid();
+  saveState();
+  showToast(`🎁 +${formatNum(reward)} coins claimed! Come back tomorrow.`, 'success', 4500);
+}
+
+function handleDailyDouble() {
+  if ($('btn-daily-double').disabled) return;
+  haptic('medium');
+  $('btn-daily-claim').disabled  = true;
+  $('btn-daily-double').disabled = true;
+  setAdLoading('ring-daily-dbl', 'txt-daily-dbl', true);
+
+  showAdsgramAd(
+    ADS_BLOCK_DAILY,
+    () => {
+      const reward = getDailyRewardForToday() * 2;
+      state.coins         += reward;
+      state.lastDailyClaim = Date.now();
+      state.dailyStreak    = Math.min(state.dailyStreak + 1, 6);
+      state.adsWatched    += 1;
+      setAdLoading('ring-daily-dbl', 'txt-daily-dbl', false);
+      renderAll();
+      buildDailyGrid();
+      saveState();
+      showToast(`🎉 Double reward! +${formatNum(reward)} coins! Come back tomorrow.`, 'success', 5000);
+    },
+    (err) => {
+      setAdLoading('ring-daily-dbl', 'txt-daily-dbl', false);
+      $('btn-daily-claim').disabled  = false;
+      $('btn-daily-double').disabled = false;
+      const isSkip = String(err?.message || '').toLowerCase().includes('skip');
+      showToast(isSkip ? '⚠️ Ad skipped. Watch fully for double reward!' : '⚠️ Ad not available. Claim standard reward instead.', 'error');
+    }
+  );
+}
+
+function updateDailyButtons() {
+  const claimBtn  = $('btn-daily-claim');
+  const doubleBtn = $('btn-daily-double');
+  const cdEl      = $('cd-daily');
+  const descEl    = $('daily-claim-desc');
+  const txtD      = $('txt-daily');
+  const txtDB     = $('txt-daily-dbl');
+
+  const reward      = getDailyRewardForToday();
+  const canClaim    = isNewDay(state.lastDailyClaim);
+  const alreadyClaimed = isSameDay(state.lastDailyClaim, Date.now());
+
+  if (txtD)  txtD.textContent  = `Claim ${formatNum(reward)} Coins 🎁`;
+  if (txtDB) txtDB.textContent = `Double: ${formatNum(reward * 2)} Coins 📺`;
+
+  if (alreadyClaimed) {
+    claimBtn.disabled  = true;
+    doubleBtn.disabled = true;
+    /* Show countdown to midnight */
+    const now        = new Date();
+    const midnight   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+    const msLeft     = midnight - now;
+    const hLeft      = Math.floor(msLeft / 3600000);
+    const mLeft      = Math.floor((msLeft % 3600000) / 60000);
+    const sLeft      = Math.floor((msLeft % 60000) / 1000);
+    cdEl.innerHTML   = `Next reward in <b>${hLeft}h ${mLeft}m ${sLeft}s</b>`;
+    descEl.textContent = '✅ You have claimed today\'s reward. Return tomorrow!';
+  } else if (canClaim) {
+    claimBtn.disabled  = false;
+    doubleBtn.disabled = false;
+    cdEl.innerHTML     = '';
+    descEl.textContent = `Claim your Day ${Math.min(state.dailyStreak + 1, 7)} reward! Watch an ad to double it.`;
+  } else {
+    claimBtn.disabled  = true;
+    doubleBtn.disabled = true;
+    cdEl.innerHTML     = '';
+  }
+}
+
+/* ════════════════════════════════
+   MISSIONS
+════════════════════════════════ */
+function updateMissions() {
+  /* 100 taps */
+  const taps = state.totalTaps;
+  const t100done = taps >= 100;
+  $('mission-100tap-reward').textContent = t100done ? '✅ Completed!' : `${Math.min(taps, 100)} / 100 taps`;
+  $('mission-100tap-reward').style.color = t100done ? '#34D399' : '#64748b';
+  const b100 = $('mission-100tap-badge');
+  if (t100done) {
+    b100.style.display = 'inline-flex';
+    b100.className = 'gap-pill pill-green';
+    b100.textContent = '✅ Done';
+  } else {
+    b100.style.display = 'none';
+  }
+
+  /* 1000 coins */
+  const coins = state.coins;
+  const c1kdone = coins >= 1000;
+  $('mission-1k-reward').textContent = c1kdone ? '✅ Completed!' : `${Math.min(coins, 1000).toLocaleString()} / 1,000 coins`;
+  $('mission-1k-reward').style.color = c1kdone ? '#34D399' : '#64748b';
+  const b1k = $('mission-1k-badge');
+  if (c1kdone) {
+    b1k.style.display = 'inline-flex';
+    b1k.className = 'gap-pill pill-green';
+    b1k.textContent = '✅ Done';
+  } else {
+    b1k.style.display = 'none';
+  }
+
+  /* 5 ads */
+  const ads = state.adsWatched;
+  const a5done = ads >= 5;
+  $('mission-5ad-reward').textContent = a5done ? '✅ Completed!' : `${Math.min(ads, 5)} / 5 ads`;
+  $('mission-5ad-reward').style.color = a5done ? '#34D399' : '#64748b';
+  const b5a = $('mission-5ad-badge');
+  if (a5done) {
+    b5a.style.display = 'inline-flex';
+    b5a.className = 'gap-pill pill-green';
+    b5a.textContent = '✅ Done';
+  } else {
+    b5a.style.display = 'none';
+  }
+}
+
+/* ════════════════════════════════
+   TOAST SYSTEM
+════════════════════════════════ */
+function showToast(msg, type = 'info', duration = 3200) {
+  const icons = { success: '✅', error: '❌', info: '🪙' };
+  const area  = $('toast-area');
+  const div   = document.createElement('div');
+  div.className = `toast ${type}`;
+  div.innerHTML = `<span class="toast-ico">${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  area.appendChild(div);
+  setTimeout(() => {
+    div.classList.add('hiding');
+    setTimeout(() => div.remove(), 320);
+  }, duration);
+}
+
+/* ════════════════════════════════
+   TAB NAVIGATION
+════════════════════════════════ */
+const TABS = ['tap','boosts','tasks','daily'];
+function switchTab(tab) {
+  haptic('light');
+  TABS.forEach(t => {
+    $(`page-${t}`).classList.toggle('active', t === tab);
+    $(`nav-${t}`).classList.toggle('active',  t === tab);
+  });
+  /* Rebuild daily grid on switch */
+  if (tab === 'daily') buildDailyGrid();
+}
+
+/* ════════════════════════════════
+   MODAL
+════════════════════════════════ */
+function openSettings() {
+  haptic('light');
+  renderAll();
+  $('modal-settings').classList.add('open');
+}
+window.closeModal = function(id) {
+  $(id).classList.remove('open');
+};
+
+/* ════════════════════════════════
+   AUTO-SAVE
+════════════════════════════════ */
+function startAutoSave() {
+  setInterval(saveState, 8000);
+  window.addEventListener('beforeunload', saveState);
+  window.addEventListener('pagehide',     saveState);
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') saveState();
+  });
+}
+
+/* ════════════════════════════════
+   LUCIDE ICONS INIT
+════════════════════════════════ */
+function initIcons() {
+  if (window.lucide && typeof window.lucide.createIcons === 'function') {
+    window.lucide.createIcons();
+  }
+}
+
+/* ════════════════════════════════
+   BOOT
+════════════════════════════════ */
+function boot() {
+  loadState();
+  initTelegram();
+  initIcons();
+  buildDailyGrid();
+  renderAll();
+  attachCoinEvents();
+  startEnergyRegen();
+  startBoostTicker();
+  startCooldownTickers();
+  startAutoSave();
+
+  /* Prevent rubber-band scroll on coin tap area */
+  document.addEventListener('touchmove', e => {
+    if (e.target === el.coinBtn || el.coinBtn.contains(e.target)) {
+      e.preventDefault();
+    }
+  }, { passive: false });
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', boot);
+} else {
+  boot();
+}
+</script>
+</body>
+</html>
