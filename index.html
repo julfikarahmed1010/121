@@ -1,0 +1,1141 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>TapRush - Reward Ecosystem</title>
+  
+  <!-- Tailwind CSS Play CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  
+  <!-- AdsGram SDK -->
+  <script src="https://sad.adsgram.ai/js/sad.min.js"></script>
+  
+  <!-- Firebase SDKs (Compat models for simple single-file runtime compilation) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+
+  <style>
+    /* Telegram Dark Mode Native Theme Color Variables & Custom Smooth UI Layout */
+    body {
+      background-color: #070a12;
+      color: #f3f4f6;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      user-select: none;
+      -webkit-user-select: none;
+      overflow: hidden;
+    }
+    
+    .glass-card {
+      background: rgba(15, 23, 42, 0.55);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .glass-input {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .glass-input:focus {
+      border-color: #f59e0b;
+      outline: none;
+    }
+
+    /* Tapper Dynamic Floating Indicators */
+    .tap-indicator {
+      position: absolute;
+      font-weight: 800;
+      font-size: 1.6rem;
+      color: #fbbf24;
+      pointer-events: none;
+      animation: floatUpAndFade 0.7s ease-out forwards;
+      z-index: 100;
+      text-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+    }
+
+    @keyframes floatUpAndFade {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(1.1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-130px) scale(0.85);
+      }
+    }
+
+    /* Skeleton Loading Anim */
+    .skeleton {
+      background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+      background-size: 200% 100%;
+      animation: skeletonLoading 1.4s infinite;
+    }
+
+    @keyframes skeletonLoading {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    .nav-shadow {
+      box-shadow: 0 -5px 25px rgba(0, 0, 0, 0.55);
+    }
+  </style>
+</head>
+<body class="h-screen w-screen flex flex-col justify-between select-none overflow-hidden">
+
+  <!-- ======================== TOASTS & NOTIFICATIONS ======================== -->
+  <div id="toast-container" class="fixed top-4 left-0 right-0 mx-auto w-11/12 max-w-md z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- ======================== SCREEN 1: SPLASH SCREEN ======================== -->
+  <div id="screen-splash" class="fixed inset-0 bg-[#070a12] z-50 flex flex-col justify-between items-center py-16 px-6">
+    <div class="flex-1 flex flex-col items-center justify-center">
+      <!-- Animated Brand Logo -->
+      <div class="w-28 h-28 bg-gradient-to-tr from-amber-600 via-yellow-400 to-amber-300 rounded-3xl flex items-center justify-center shadow-2xl shadow-yellow-500/20 mb-6 relative animate-pulse">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-black" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <h1 class="text-3xl font-black tracking-widest bg-gradient-to-r from-white via-slate-200 to-amber-400 bg-clip-text text-transparent">TAP RUSH</h1>
+      <p class="text-slate-400 text-xs mt-2 text-center max-w-xs">Maximize your rewards, complete missions and dominate global standings.</p>
+    </div>
+    <div class="w-full max-w-xs flex flex-col items-center">
+      <div class="w-full bg-slate-800/80 h-1 rounded-full overflow-hidden mb-3">
+        <div id="splash-progress-bar" class="bg-amber-400 h-full w-0 transition-all duration-300"></div>
+      </div>
+      <p id="splash-status" class="text-[10px] text-slate-500 tracking-widest uppercase font-semibold">INITIALIZING SESSION...</p>
+    </div>
+  </div>
+
+  <!-- ======================== MAIN VIEWS CONTAINER ======================== -->
+  <main class="flex-1 overflow-y-auto px-4 pt-4 pb-24 w-full">
+
+    <!-- SCREEN 2: HOME DASHBOARD / TAP TO EARN -->
+    <div id="view-home" class="view-panel flex flex-col items-center space-y-6">
+      
+      <!-- Mini Dashboard Panel -->
+      <div class="w-full glass-card rounded-2xl p-4 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div id="user-avatar" class="w-10 h-10 rounded-full bg-slate-800 flex items-center justify-center font-bold text-amber-400 text-base border border-slate-700/60">TR</div>
+          <div>
+            <div id="user-display-name" class="font-bold text-sm text-white">Loading...</div>
+            <div class="flex items-center space-x-1.5 mt-0.5">
+              <span class="text-[10px] px-2 py-0.5 bg-yellow-500/15 text-yellow-400 font-bold rounded-full border border-yellow-500/20">Lvl <span id="lbl-tap-level">1</span></span>
+              <span id="lbl-streak-badge" class="text-[10px] px-2 py-0.5 bg-orange-500/15 text-orange-400 font-bold rounded-full border border-orange-500/20">🔥 <span id="lbl-streak-count">0</span> Days</span>
+            </div>
+          </div>
+        </div>
+        <div class="text-right">
+          <p class="text-[9px] uppercase tracking-wider text-slate-400 font-semibold">Lifetime Yield</p>
+          <p id="lbl-lifetime-earnings" class="text-xs font-extrabold text-slate-200">0</p>
+        </div>
+      </div>
+
+      <!-- Balance Header Display -->
+      <div class="text-center py-2">
+        <p class="text-slate-400 text-xs uppercase tracking-widest font-semibold mb-1">AVAILABLE BALANCE</p>
+        <div class="flex items-center justify-center space-x-2">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-9 w-9 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+            <circle cx="10" cy="10" r="9" fill="#f59e0b" />
+            <circle cx="10" cy="10" r="7" fill="#fbbf24" />
+            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16z" clip-rule="evenodd" fill="#451a03" />
+          </svg>
+          <span id="lbl-balance" class="text-4xl font-black text-white tracking-tight">0</span>
+        </div>
+      </div>
+
+      <!-- Core Interactive Clicker -->
+      <div class="relative w-72 h-72 flex items-center justify-center">
+        <!-- Radial Glowing Aura -->
+        <div class="absolute inset-0 bg-yellow-500/5 rounded-full blur-3xl"></div>
+        <!-- Touch circle -->
+        <button id="btn-tap" class="relative w-64 h-64 bg-gradient-to-tr from-yellow-600 via-amber-400 to-amber-300 rounded-full flex items-center justify-center shadow-2xl focus:outline-none active:scale-95 transition-transform duration-75 border-[6px] border-slate-900 select-none">
+          <div class="absolute inset-2 bg-gradient-to-br from-[#111726] to-[#080d16] rounded-full flex flex-col justify-center items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-20 w-20 text-amber-400 pointer-events-none" viewBox="0 0 20 20" fill="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z" />
+            </svg>
+            <span class="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-2">TAP TO RUSH</span>
+          </div>
+        </button>
+      </div>
+
+      <!-- Energy Mechanics Status Slider -->
+      <div class="w-full max-w-xs space-y-1.5">
+        <div class="flex justify-between items-center text-xs font-semibold px-1">
+          <span class="text-slate-400 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-cyan-400 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path fill-rule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clip-rule="evenodd" />
+            </svg>
+            Energy Limit
+          </span>
+          <span class="text-slate-200 font-bold"><span id="lbl-energy">1000</span>/<span id="lbl-max-energy">1000</span></span>
+        </div>
+        <div class="w-full bg-slate-900 h-2.5 rounded-full overflow-hidden border border-slate-800">
+          <div id="energy-progress-bar" class="bg-gradient-to-r from-cyan-400 to-blue-500 h-full w-full transition-all duration-100"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 3: EARN & ADS PAGE -->
+    <div id="view-earn" class="view-panel hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-black text-white">Watch & Earn</h2>
+        <p class="text-slate-400 text-xs mt-1">Complete instant sponsored video tasks powered by AdsGram.</p>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 flex flex-col items-center space-y-4">
+        <div class="w-16 h-16 bg-blue-500/10 rounded-full flex items-center justify-center border border-blue-500/20">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+          </svg>
+        </div>
+        <div class="text-center">
+          <h3 class="font-bold text-white text-base">AdsGram Video Ad</h3>
+          <p class="text-xs text-slate-400 mt-1 max-w-xs">Gain <span class="text-amber-400 font-extrabold">+500 Coins</span> per successfully completed video. Cooldown resets in 30s.</p>
+        </div>
+
+        <button id="btn-watch-ad" class="w-full py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-extrabold text-sm rounded-xl active:scale-95 transition-transform flex items-center justify-center space-x-2">
+          <span>LAUNCH SPONSOR VIDEO (+500 Coins)</span>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-2 gap-3">
+        <div class="glass-card p-4 rounded-xl text-center">
+          <p class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Today Watched</p>
+          <p id="lbl-ads-watched-today" class="text-2xl font-black text-white mt-1">0</p>
+        </div>
+        <div class="glass-card p-4 rounded-xl text-center">
+          <p class="text-slate-400 text-[10px] uppercase font-bold tracking-wider">Total Ads Watched</p>
+          <p id="lbl-ads-watched-total" class="text-2xl font-black text-white mt-1">0</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 4: DAILY STREAKS PAGE -->
+    <div id="view-daily" class="view-panel hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-black text-white">Daily Streak Reward</h2>
+        <p class="text-slate-400 text-xs mt-1">Open daily to claim sequential dynamic reward values.</p>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 flex flex-col items-center">
+        <!-- 7-Day Matrix -->
+        <div class="grid grid-cols-4 gap-2 w-full mb-6" id="daily-days-grid"></div>
+
+        <button id="btn-claim-daily" class="w-full py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-black font-extrabold text-sm rounded-xl active:scale-95 transition-transform">
+          CLAIM TODAY'S BONUSES
+        </button>
+      </div>
+    </div>
+
+    <!-- SCREEN 5: TASKS LIST PAGE -->
+    <div id="view-tasks" class="view-panel hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-black text-white">Reward Quests</h2>
+        <p class="text-slate-400 text-xs mt-1">Follow ecosystem integrations and earn lump-sum rewards.</p>
+      </div>
+
+      <div class="space-y-3" id="tasks-list"></div>
+    </div>
+
+    <!-- SCREEN 6: REFERRALS SYSTEM PAGE -->
+    <div id="view-referrals" class="view-panel hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-black text-white">Invite Program</h2>
+        <p class="text-slate-400 text-xs mt-1">Refer users to get commission structures and starting bonuses.</p>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div>
+          <label class="text-[10px] text-slate-400 uppercase tracking-widest font-bold block mb-2">Invitation Link</label>
+          <div class="flex space-x-2">
+            <input type="text" id="input-ref-link" readonly value="https://t.me/TapRushBot/app?startapp=ref_user" class="flex-1 text-slate-300 text-xs px-3 py-2.5 rounded-xl glass-input select-all">
+            <button id="btn-copy-link" class="px-5 py-2.5 bg-slate-800 text-amber-400 rounded-xl hover:bg-slate-700 font-extrabold text-xs">COPY</button>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800/80 flex justify-between items-center text-sm">
+          <span class="text-slate-400">Total Referred Peers:</span>
+          <span id="lbl-ref-count" class="font-extrabold text-white text-base">0</span>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 space-y-3">
+        <h3 class="font-bold text-xs text-white uppercase tracking-wider">Referral Reward Allocation</h3>
+        <ul class="text-xs text-slate-400 space-y-2">
+          <li class="flex items-start">
+            <span class="text-amber-400 mr-2">•</span> Referrer instantly receives <span class="text-white font-semibold">+1,000 Coins</span>.
+          </li>
+          <li class="flex items-start">
+            <span class="text-amber-400 mr-2">•</span> Referee starting gift is <span class="text-white font-semibold">+500 Coins</span>.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- SCREEN 7: GLOBAL LEADERBOARD PAGE -->
+    <div id="view-leaderboard" class="view-panel hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-black text-white">Global Standings</h2>
+        <p class="text-slate-400 text-xs mt-1">Who currently owns the highest RUSH vault metrics?</p>
+      </div>
+
+      <!-- Segment Selector -->
+      <div class="flex bg-slate-900/80 p-1 rounded-xl border border-slate-800/60">
+        <button id="tab-lead-alltime" class="flex-1 py-2 rounded-lg font-bold text-xs text-center text-white bg-slate-800 shadow">All-Time Leaders</button>
+        <button id="tab-lead-weekly" class="flex-1 py-2 rounded-lg font-bold text-xs text-center text-slate-400 hover:text-white transition-colors">Weekly Leaders</button>
+      </div>
+
+      <div class="glass-card rounded-2xl overflow-hidden">
+        <div id="leaderboard-container" class="divide-y divide-slate-800/50"></div>
+      </div>
+    </div>
+
+    <!-- SCREEN 8: WALLET SYSTEMS PAGE -->
+    <div id="view-wallet" class="view-panel hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-black text-white">Asset Wallet</h2>
+        <p class="text-slate-400 text-xs mt-1">Securing non-custodial asset integrations.</p>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div>
+          <p class="text-slate-400 text-xs uppercase font-semibold">Unclaimed Allocation</p>
+          <p class="text-4xl font-extrabold text-amber-400 mt-1"><span id="lbl-wallet-balance">0</span> <span class="text-lg text-slate-300">RUSH</span></p>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800/80 flex justify-between text-xs text-slate-400">
+          <span>Est. Value (USDT):</span>
+          <span class="text-slate-200 font-bold" id="lbl-wallet-usd">$0.00</span>
+        </div>
+      </div>
+
+      <div class="space-y-2">
+        <h3 class="text-sm font-bold text-white px-1">Transaction History</h3>
+        <div id="wallet-history-container" class="space-y-2"></div>
+      </div>
+    </div>
+
+    <!-- SCREEN 9: PROFILE AND BADGES PAGE -->
+    <div id="view-profile" class="view-panel hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-black text-white">User Portfolio</h2>
+        <p class="text-slate-400 text-xs mt-1">Track your account credentials and system badges.</p>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <h3 class="font-bold text-sm text-white uppercase tracking-wider">System Achievements</h3>
+        <div class="grid grid-cols-3 gap-2" id="achievements-grid"></div>
+      </div>
+    </div>
+
+    <!-- SCREEN 10: SETTINGS PAGE -->
+    <div id="view-settings" class="view-panel hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-black text-white">Configuration</h2>
+        <p class="text-slate-400 text-xs mt-1">Set user experience adjustments.</p>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div class="flex justify-between items-center">
+          <span class="text-sm text-slate-300 font-medium">Haptic Touch Feedback</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input id="chk-haptic" type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-850 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+          </label>
+        </div>
+
+        <div class="flex justify-between items-center pt-3 border-t border-slate-800/85">
+          <span class="text-sm text-slate-300 font-medium">App Sounds</span>
+          <label class="relative inline-flex items-center cursor-pointer">
+            <input id="chk-audio" type="checkbox" checked class="sr-only peer">
+            <div class="w-11 h-6 bg-slate-850 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+          </label>
+        </div>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 space-y-3">
+        <h3 class="font-bold text-sm text-white uppercase tracking-wider">Asset Power Store</h3>
+        <div class="space-y-2">
+          <button id="btn-upgrade-tap" class="w-full p-3 bg-slate-900/60 hover:bg-slate-800 rounded-xl flex justify-between items-center text-xs border border-slate-800/50">
+            <span class="text-left">
+              <p class="font-bold text-white text-sm">Tap Multiplier Upgrade</p>
+              <p class="text-slate-400">Increase per click output (+1)</p>
+            </span>
+            <span id="lbl-cost-tap-upgrade" class="bg-amber-400 text-black font-extrabold px-3 py-2 rounded-lg text-xs">1,000 Coins</span>
+          </button>
+          
+          <button id="btn-upgrade-energy" class="w-full p-3 bg-slate-900/60 hover:bg-slate-800 rounded-xl flex justify-between items-center text-xs border border-slate-800/50">
+            <span class="text-left">
+              <p class="font-bold text-white text-sm">Energy Capacity Boost</p>
+              <p class="text-slate-400">Expand capacity vault (+500)</p>
+            </span>
+            <span id="lbl-cost-energy-upgrade" class="bg-cyan-400 text-black font-extrabold px-3 py-2 rounded-lg text-xs">1,500 Coins</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- SCREEN 11: ADMIN PANEL -->
+    <div id="view-admin" class="view-panel hidden space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-black text-red-500">System Control</h2>
+        <p class="text-slate-400 text-xs mt-1">Ecosystem Sandbox parameters.</p>
+      </div>
+
+      <div class="glass-card rounded-2xl p-5 space-y-4">
+        <div>
+          <label class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Ecosystem Active Mode</label>
+          <div class="flex gap-2 mt-2">
+            <button id="btn-admin-offline-mode" class="flex-1 py-2.5 bg-yellow-500/10 text-yellow-400 font-bold text-xs rounded-xl border border-yellow-500/20">LOCAL RECOVERY (OFFLINE)</button>
+            <button id="btn-admin-real-mode" class="flex-1 py-2.5 bg-slate-800 text-slate-400 font-bold text-xs rounded-xl">FIREBASE ACTIVE</button>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-slate-800/80">
+          <label class="text-[10px] text-slate-400 uppercase font-bold block mb-2">Inject Token Balance</label>
+          <div class="flex space-x-2">
+            <input type="number" id="input-admin-cheat" value="25000" class="flex-1 bg-slate-900 text-slate-100 text-xs px-3 py-2 rounded-xl border border-slate-800">
+            <button id="btn-admin-inject-balance" class="px-4 py-2 bg-red-600 hover:bg-red-500 text-white font-bold text-xs rounded-xl transition-colors">INJECT</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ======================== COMPONENT: BOTTOM NAVIGATION ======================== -->
+  <nav id="bottom-navigation" class="fixed bottom-0 left-0 right-0 h-20 bg-[#090d16] border-t border-slate-800/80 nav-shadow flex items-center justify-around px-2 z-40">
+    
+    <button data-target="view-home" class="nav-item flex flex-col items-center justify-center space-y-1.5 text-amber-500">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor">
+        <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+      </svg>
+      <span class="text-[10px] font-bold uppercase tracking-wider">Tapper</span>
+    </button>
+
+    <button data-target="view-earn" class="nav-item flex flex-col items-center justify-center space-y-1.5 text-slate-400 hover:text-white">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+      </svg>
+      <span class="text-[10px] font-bold uppercase tracking-wider">Earn Ads</span>
+    </button>
+
+    <button data-target="view-daily" class="nav-item flex flex-col items-center justify-center space-y-1.5 text-slate-400 hover:text-white">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+      </svg>
+      <span class="text-[10px] font-bold uppercase tracking-wider">Streak</span>
+    </button>
+
+    <button data-target="view-tasks" class="nav-item flex flex-col items-center justify-center space-y-1.5 text-slate-400 hover:text-white">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+      </svg>
+      <span class="text-[10px] font-bold uppercase tracking-wider">Tasks</span>
+    </button>
+
+    <button id="btn-nav-more" class="flex flex-col items-center justify-center space-y-1.5 text-slate-400 hover:text-white relative">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+      <span class="text-[10px] font-bold uppercase tracking-wider">More</span>
+
+      <!-- Submenu Contextual Drawer -->
+      <div id="more-submenu" class="absolute bottom-20 right-0 w-44 bg-[#090c15] border border-slate-800 rounded-xl shadow-2xl py-1 hidden flex flex-col divide-y divide-slate-800/60 z-50">
+        <button data-target="view-referrals" class="submenu-item text-left w-full py-3 px-4 text-xs font-bold text-slate-300 hover:bg-slate-800/60">INVITE FRIENDS</button>
+        <button data-target="view-leaderboard" class="submenu-item text-left w-full py-3 px-4 text-xs font-bold text-slate-300 hover:bg-slate-800/60">LEADERBOARDS</button>
+        <button data-target="view-wallet" class="submenu-item text-left w-full py-3 px-4 text-xs font-bold text-slate-300 hover:bg-slate-800/60">WALLET VAULT</button>
+        <button data-target="view-profile" class="submenu-item text-left w-full py-3 px-4 text-xs font-bold text-slate-300 hover:bg-slate-800/60">ACHIEVEMENTS</button>
+        <button data-target="view-settings" class="submenu-item text-left w-full py-3 px-4 text-xs font-bold text-slate-300 hover:bg-slate-800/60">PREFERENCES</button>
+        <button data-target="view-admin" id="btn-nav-admin" class="submenu-item text-left w-full py-3 px-4 text-xs font-bold text-red-500 hover:bg-red-950/20 hidden">ADMIN PANEL</button>
+      </div>
+    </button>
+
+  </nav>
+
+  <!-- ======================== CORE APPLICATION ENGINE ======================== -->
+  <script>
+    // ----------------------------------------------------
+    // INITIAL SYSTEM ARCHITECTURE CONFIG & LOCAL STATE
+    // ----------------------------------------------------
+    const CONFIG = {
+      isFirebaseActive: false, // ফায়ারবেস চালু করতে true করে নিচের ক্রেডেন্সিয়াল দিন
+      adsgramBlockId: "YOUR_ADSGRAM_BLOCK_ID",
+      firebaseConfig: {
+        apiKey: "YOUR_API_KEY",
+        authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+        projectId: "YOUR_PROJECT_ID",
+        storageBucket: "YOUR_PROJECT_ID.appspot.com",
+        messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+        appId: "YOUR_APP_ID"
+      }
+    };
+
+    // Client memory representation mapping exact firestore models
+    let localUserData = {
+      uid: "100001",
+      username: "Guest_Tapper",
+      firstName: "Guest",
+      lastName: "User",
+      balance: 100,
+      lifetimeEarnings: 100,
+      energy: 1000,
+      maxEnergy: 1000,
+      energyLevel: 1,
+      tapLevel: 1,
+      boostLevel: 1,
+      lastRegenTime: Date.now(),
+      dailyStreak: 0,
+      lastClaimDate: null,
+      referredBy: null,
+      referralCount: 0,
+      totalAdsWatched: 0,
+      todayAdsWatched: 0,
+      lastAdWatchedTime: 0,
+      role: "admin", // Admin layout visibility toggler
+      createdAt: Date.now()
+    };
+
+    const taskCatalog = [
+      { id: "join_channel", title: "Join TapRush News Channel", reward: 2500, link: "https://t.me/telegram", completed: false },
+      { id: "youtube_subs", title: "Subscribe Official YouTube", reward: 4000, link: "https://youtube.com", completed: false },
+      { id: "follow_x", title: "Follow our updates on X", reward: 1500, link: "https://x.com", completed: false }
+    ];
+
+    const achievementCatalog = [
+      { id: "first_login", title: "Pioneer", desc: "Open TapRush System app", req: "login", unlocked: true },
+      { id: "first_ad", title: "Sponsor Patron", desc: "Watch 1 sponsored video", req: "ad_1", unlocked: false },
+      { id: "ten_ads", title: "Ecosystem Booster", desc: "Watch 10 sponsored videos", req: "ad_10", unlocked: false },
+      { id: "first_referral", title: "Network Builder", desc: "Successfully invite 1 peer", req: "ref_1", unlocked: false }
+    ];
+
+    let adsgramController = null;
+    let databaseReference = null;
+
+    // ----------------------------------------------------
+    // DOM DOMINATIVE INTERACTION SELECTORS
+    // ----------------------------------------------------
+    const UI = {
+      splashScreen: document.getElementById('screen-splash'),
+      splashProgressBar: document.getElementById('splash-progress-bar'),
+      splashStatus: document.getElementById('splash-status'),
+      userAvatar: document.getElementById('user-avatar'),
+      userDisplayName: document.getElementById('user-display-name'),
+      lblTapLevel: document.getElementById('lbl-tap-level'),
+      lblStreakCount: document.getElementById('lbl-streak-count'),
+      lblStreakBadge: document.getElementById('lbl-streak-badge'),
+      lblLifetimeEarnings: document.getElementById('lbl-lifetime-earnings'),
+      lblBalance: document.getElementById('lbl-balance'),
+      btnTap: document.getElementById('btn-tap'),
+      lblEnergy: document.getElementById('lbl-energy'),
+      lblMaxEnergy: document.getElementById('lbl-max-energy'),
+      energyProgressBar: document.getElementById('energy-progress-bar'),
+      btnWatchAd: document.getElementById('btn-watch-ad'),
+      lblAdsWatchedToday: document.getElementById('lbl-ads-watched-today'),
+      lblAdsWatchedTotal: document.getElementById('lbl-ads-watched-total'),
+      dailyDaysGrid: document.getElementById('daily-days-grid'),
+      btnClaimDaily: document.getElementById('btn-claim-daily'),
+      tasksList: document.getElementById('tasks-list'),
+      inputRefLink: document.getElementById('input-ref-link'),
+      btnCopyLink: document.getElementById('btn-copy-link'),
+      lblRefCount: document.getElementById('lbl-ref-count'),
+      leaderboardContainer: document.getElementById('leaderboard-container'),
+      lblWalletBalance: document.getElementById('lbl-wallet-balance'),
+      lblWalletUsd: document.getElementById('lbl-wallet-usd'),
+      walletHistoryContainer: document.getElementById('wallet-history-container'),
+      achievementsGrid: document.getElementById('achievements-grid'),
+      btnUpgradeTap: document.getElementById('btn-upgrade-tap'),
+      lblCostTapUpgrade: document.getElementById('lbl-cost-tap-upgrade'),
+      btnUpgradeEnergy: document.getElementById('btn-upgrade-energy'),
+      lblCostEnergyUpgrade: document.getElementById('lbl-cost-energy-upgrade'),
+      toastContainer: document.getElementById('toast-container'),
+      chkHaptic: document.getElementById('chk-haptic'),
+      chkAudio: document.getElementById('chk-audio'),
+      moreSubmenu: document.getElementById('more-submenu'),
+      btnNavMore: document.getElementById('btn-nav-more'),
+      btnNavAdmin: document.getElementById('btn-nav-admin'),
+      btnAdminOfflineMode: document.getElementById('btn-admin-offline-mode'),
+      btnAdminRealMode: document.getElementById('btn-admin-real-mode'),
+      btnAdminInjectBalance: document.getElementById('btn-admin-inject-balance'),
+      inputAdminCheat: document.getElementById('input-admin-cheat')
+    };
+
+    // ----------------------------------------------------
+    // INITIALIZATION & USER CONFIGURATION LOADER
+    // ----------------------------------------------------
+    document.addEventListener("DOMContentLoaded", () => {
+      initializeTelegramContext();
+      initializeFirebaseEngine();
+      initializeAdsgramSDK();
+      simulateInitializationDelay();
+    });
+
+    function initializeTelegramContext() {
+      const webApp = window.Telegram?.WebApp;
+      if (webApp) {
+        webApp.ready();
+        webApp.expand();
+        
+        if (webApp.initDataUnsafe && webApp.initDataUnsafe.user) {
+          const tgUser = webApp.initDataUnsafe.user;
+          localUserData.uid = tgUser.id.toString();
+          localUserData.username = tgUser.username || "TG_User";
+          localUserData.firstName = tgUser.first_name || "";
+          localUserData.lastName = tgUser.last_name || "";
+          
+          if (webApp.initDataUnsafe.start_param) {
+            const startParam = webApp.initDataUnsafe.start_param;
+            if (startParam.startsWith("ref_")) {
+              localUserData.referredBy = startParam.replace("ref_", "");
+            }
+          }
+        }
+      }
+      
+      UI.userAvatar.innerText = localUserData.username.slice(0, 2).toUpperCase();
+      UI.userDisplayName.innerText = `${localUserData.firstName} ${localUserData.lastName}`.trim() || localUserData.username;
+      UI.inputRefLink.value = `https://t.me/TapRushBot/app?startapp=ref_${localUserData.uid}`;
+    }
+
+    function initializeFirebaseEngine() {
+      if (CONFIG.isFirebaseActive) {
+        try {
+          firebase.initializeApp(CONFIG.firebaseConfig);
+          databaseReference = firebase.firestore();
+          showNotification("Firebase configurations ready", "info");
+          UI.btnAdminRealMode.classList.replace('bg-slate-800', 'bg-green-600');
+          UI.btnAdminRealMode.classList.replace('text-slate-400', 'text-white');
+        } catch (error) {
+          console.error("Firebase startup exception:", error);
+          CONFIG.isFirebaseActive = false;
+        }
+      }
+    }
+
+    function initializeAdsgramSDK() {
+      if (window.Adsgram) {
+        adsgramController = window.Adsgram.init({ blockId: CONFIG.adsgramBlockId, debug: true });
+        showNotification("AdsGram SDK connection active", "info");
+      } else {
+        console.warn("AdsGram library not found. Falling back to sandbox simulations.");
+      }
+    }
+
+    function simulateInitializationDelay() {
+      let progress = 0;
+      const interval = setInterval(() => {
+        progress += 25;
+        UI.splashProgressBar.style.width = progress + "%";
+        
+        if (progress === 50) {
+          UI.splashStatus.innerText = "LOADING STATE ENGINES...";
+        } else if (progress === 75) {
+          UI.splashStatus.innerText = "SYNCING TRANSACTION LEDGER...";
+          loadPersistedData();
+        } else if (progress >= 100) {
+          clearInterval(interval);
+          UI.splashScreen.classList.add('hidden');
+          initializeDynamicRenders();
+          startStateRecoveryInterval();
+        }
+      }, 200);
+    }
+
+    // ----------------------------------------------------
+    // STATE STORAGE & CALCULATION LOGIC
+    // ----------------------------------------------------
+    function loadPersistedData() {
+      if (CONFIG.isFirebaseActive && databaseReference) {
+        firebase.auth().signInAnonymously()
+          .then((cred) => {
+            const userRef = databaseReference.collection('users').doc(localUserData.uid);
+            userRef.get().then((doc) => {
+              if (doc.exists) {
+                localUserData = { ...localUserData, ...doc.data() };
+              } else {
+                userRef.set(localUserData);
+                payoutReferrerLinkBonus();
+              }
+              refreshUI();
+            });
+          })
+          .catch((err) => {
+            console.error("Firebase Auth failed. Switched to local mode fallback.", err);
+            loadLocalStorageData();
+          });
+      } else {
+        loadLocalStorageData();
+      }
+    }
+
+    function loadLocalStorageData() {
+      const cached = localStorage.getItem('taprush_user_state_v1');
+      if (cached) {
+        try {
+          localUserData = { ...localUserData, ...JSON.parse(cached) };
+        } catch (e) {
+          console.error("Error reading storage values:", e);
+        }
+      }
+      refreshUI();
+    }
+
+    function saveState() {
+      localUserData.balance = Math.max(0, Math.floor(localUserData.balance));
+      localUserData.lifetimeEarnings = Math.max(localUserData.balance, localUserData.lifetimeEarnings);
+      
+      if (CONFIG.isFirebaseActive && databaseReference) {
+        databaseReference.collection('users').doc(localUserData.uid).set(localUserData, { merge: true })
+          .catch(e => console.error("Firestore synchronisation crash:", e));
+      } else {
+        localStorage.setItem('taprush_user_state_v1', JSON.stringify(localUserData));
+      }
+    }
+
+    function refreshUI() {
+      UI.lblBalance.innerText = localUserData.balance.toLocaleString();
+      UI.lblWalletBalance.innerText = localUserData.balance.toLocaleString();
+      UI.lblWalletUsd.innerText = "$" + (localUserData.balance * 0.00012).toFixed(2);
+      UI.lblLifetimeEarnings.innerText = localUserData.lifetimeEarnings.toLocaleString();
+      UI.lblEnergy.innerText = localUserData.energy;
+      UI.lblMaxEnergy.innerText = localUserData.maxEnergy;
+      UI.lblTapLevel.innerText = localUserData.tapLevel;
+      UI.lblStreakCount.innerText = localUserData.dailyStreak;
+      UI.lblCostTapUpgrade.innerText = (localUserData.tapLevel * 1000).toLocaleString() + " Coins";
+      UI.lblCostEnergyUpgrade.innerText = (localUserData.energyLevel * 1500).toLocaleString() + " Coins";
+      UI.lblAdsWatchedToday.innerText = localUserData.todayAdsWatched;
+      UI.lblAdsWatchedTotal.innerText = localUserData.totalAdsWatched;
+      UI.lblRefCount.innerText = localUserData.referralCount;
+
+      const energyPercent = (localUserData.energy / localUserData.maxEnergy) * 100;
+      UI.energyProgressBar.style.width = `${energyPercent}%`;
+
+      if (localUserData.role === "admin") {
+        UI.btnNavAdmin.classList.remove('hidden');
+      } else {
+        UI.btnNavAdmin.classList.add('hidden');
+      }
+
+      evaluateBadgeAchievements();
+    }
+
+    function payoutReferrerLinkBonus() {
+      if (localUserData.referredBy) {
+        showNotification("Starter reward claimed via ref link!", "success");
+        localUserData.balance += 500;
+        localUserData.lifetimeEarnings += 500;
+        saveState();
+      }
+    }
+
+    // ----------------------------------------------------
+    // TAP PHYSICAL CALCULATION CORE & REGENERATION
+    // ----------------------------------------------------
+    UI.btnTap.addEventListener('touchstart', (e) => {
+      for (let i = 0; i < e.touches.length; i++) {
+        processTapAction(e.touches[i].clientX, e.touches[i].clientY);
+      }
+    });
+
+    UI.btnTap.addEventListener('click', (e) => {
+      if (e.pointerType !== 'touch') {
+        processTapAction(e.clientX, e.clientY);
+      }
+    });
+
+    function processTapAction(x, y) {
+      const power = localUserData.tapLevel;
+      if (localUserData.energy >= power) {
+        localUserData.energy -= power;
+        localUserData.balance += power;
+        localUserData.lifetimeEarnings += power;
+        
+        createTapFloatingIndicator(x, y, `+${power}`);
+        triggerHapticFeedback();
+        
+        refreshUI();
+        saveState();
+      } else {
+        showNotification("Maximum energy depleted!", "info");
+      }
+    }
+
+    function createTapFloatingIndicator(x, y, text) {
+      const el = document.createElement('div');
+      el.className = 'tap-indicator';
+      el.innerText = text;
+      el.style.left = `${x - 12}px`;
+      el.style.top = `${y - 15}px`;
+      document.body.appendChild(el);
+      
+      setTimeout(() => el.remove(), 700);
+    }
+
+    function startStateRecoveryInterval() {
+      setInterval(() => {
+        const recoveryPower = 1 + localUserData.boostLevel;
+        if (localUserData.energy < localUserData.maxEnergy) {
+          localUserData.energy = Math.min(localUserData.maxEnergy, localUserData.energy + recoveryPower);
+          refreshUI();
+        }
+      }, 1000);
+    }
+
+    // ----------------------------------------------------
+    // ADSGRAM CLIENT INTEGRATION PROCESSORS
+    // ----------------------------------------------------
+    UI.btnWatchAd.addEventListener('click', () => {
+      const now = Date.now();
+      const delay = now - localUserData.lastAdWatchedTime;
+      if (delay < 30000) {
+        const timeRemaining = Math.ceil((30000 - delay) / 1000);
+        showNotification(`Monetization cooldown active. Wait ${timeRemaining}s.`, "info");
+        return;
+      }
+
+      UI.btnWatchAd.disabled = true;
+      UI.btnWatchAd.innerText = "STREAMING VIDEO AD...";
+
+      if (adsgramController) {
+        adsgramController.show()
+          .then(() => {
+            processAdReward();
+          })
+          .catch((err) => {
+            console.error("Adsgram stream exception:", err);
+            showNotification("Ad skipped or loading failure.", "error");
+            resetAdButtonUI();
+          });
+      } else {
+        // Local simulation fallback
+        showNotification("Triggering local sandbox video ad simulation...", "info");
+        setTimeout(() => {
+          processAdReward();
+        }, 2500);
+      }
+    });
+
+    function processAdReward() {
+      localUserData.balance += 500;
+      localUserData.lifetimeEarnings += 500;
+      localUserData.totalAdsWatched += 1;
+      localUserData.todayAdsWatched += 1;
+      localUserData.lastAdWatchedTime = Date.now();
+      
+      showNotification("Earned +500 Coins securely!", "success");
+      resetAdButtonUI();
+      refreshUI();
+      saveState();
+    }
+
+    function resetAdButtonUI() {
+      UI.btnWatchAd.disabled = false;
+      UI.btnWatchAd.innerText = "LAUNCH SPONSOR VIDEO (+500 Coins)";
+    }
+
+    // ----------------------------------------------------
+    // SEQUENTIAL STREAKS SCHEME
+    // ----------------------------------------------------
+    function renderStreakGrid() {
+      UI.dailyDaysGrid.innerHTML = "";
+      const awards = [150, 300, 600, 1200, 2400, 4800, 9600];
+      
+      for (let i = 1; i <= 7; i++) {
+        const isClaimed = i <= localUserData.dailyStreak;
+        const isCurrent = i === localUserData.dailyStreak + 1;
+        
+        let visualStyle = "bg-slate-900/40 text-slate-500 border-slate-800/80";
+        if (isClaimed) {
+          visualStyle = "bg-green-500/10 text-green-400 border-green-500/20";
+        } else if (isCurrent) {
+          visualStyle = "bg-amber-500/10 text-amber-300 border-amber-500/40 animate-pulse";
+        }
+
+        UI.dailyDaysGrid.innerHTML += `
+          <div class="glass-card ${visualStyle} p-3 rounded-xl border text-center flex flex-col justify-between h-20">
+            <span class="text-[9px] font-bold uppercase tracking-wider">Day ${i}</span>
+            <div class="my-0.5 text-center font-extrabold text-xs">
+              ${isClaimed ? '✓' : '+' + awards[i-1]}
+            </div>
+            <span class="text-[8px] text-slate-500">COINS</span>
+          </div>
+        `;
+      }
+    }
+
+    UI.btnClaimDaily.addEventListener('click', () => {
+      const today = new Date().toISOString().split('T')[0];
+      
+      if (localUserData.lastClaimDate === today) {
+        showNotification("Already claimed today's rewards!", "info");
+        return;
+      }
+
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+      if (localUserData.lastClaimDate === yesterdayStr) {
+        localUserData.dailyStreak = (localUserData.dailyStreak % 7) + 1;
+      } else {
+        // Missed day resets progress
+        localUserData.dailyStreak = 1;
+      }
+
+      const awards = [150, 300, 600, 1200, 2400, 4800, 9600];
+      const payout = awards[localUserData.dailyStreak - 1];
+
+      localUserData.balance += payout;
+      localUserData.lifetimeEarnings += payout;
+      localUserData.lastClaimDate = today;
+
+      showNotification(`Claimed Day ${localUserData.dailyStreak} reward: +${payout} Coins!`, "success");
+      renderStreakGrid();
+      refreshUI();
+      saveState();
+    });
+
+    // ----------------------------------------------------
+    // STORE UPGRADE MECHANICAL CONTROLS
+    // ----------------------------------------------------
+    UI.btnUpgradeTap.addEventListener('click', () => {
+      const cost = localUserData.tapLevel * 1000;
+      if (localUserData.balance >= cost) {
+        localUserData.balance -= cost;
+        localUserData.tapLevel += 1;
+        showNotification(`Tap multiplier upgraded to Level ${localUserData.tapLevel}!`, "success");
+        refreshUI();
+        saveState();
+      } else {
+        showNotification("Not enough coins for tap upgrade!", "error");
+      }
+    });
+
+    UI.btnUpgradeEnergy.addEventListener('click', () => {
+      const cost = localUserData.energyLevel * 1500;
+      if (localUserData.balance >= cost) {
+        localUserData.balance -= cost;
+        localUserData.energyLevel += 1;
+        localUserData.maxEnergy += 500;
+        localUserData.energy = localUserData.maxEnergy; // Fully refill energy
+        showNotification(`Maximum capacity expanded to ${localUserData.maxEnergy}!`, "success");
+        refreshUI();
+        saveState();
+      } else {
+        showNotification("Not enough coins for capacity upgrade!", "error");
+      }
+    });
+
+    // ----------------------------------------------------
+    // TARGET TASKS & COMPLETION FLOWS
+    // ----------------------------------------------------
+    function renderTaskCatalog() {
+      UI.tasksList.innerHTML = "";
+      taskCatalog.forEach((task) => {
+        const isCompleted = localUserData[task.id] || false;
+        
+        UI.tasksList.innerHTML += `
+          <div class="glass-card rounded-xl p-4 flex justify-between items-center">
+            <div>
+              <p class="font-bold text-xs text-white">${task.title}</p>
+              <p class="text-[10px] text-amber-400 font-extrabold mt-0.5">+${task.reward.toLocaleString()} Coins</p>
+            </div>
+            <div>
+              ${isCompleted 
+                ? `<span class="px-3 py-1.5 bg-green-500/10 text-green-400 font-bold text-xs rounded-xl border border-green-500/20">Completed</span>`
+                : `<button onclick="executeTaskFlow('${task.id}')" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-xs rounded-lg">START</button>`
+              }
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    window.executeTaskFlow = function(taskId) {
+      const task = taskCatalog.find(t => t.id === taskId);
+      if (!task) return;
+
+      if (window.Telegram?.WebApp) {
+        window.Telegram.WebApp.openLink(task.link);
+      } else {
+        window.open(task.link, '_blank');
+      }
+
+      showNotification("Verification pending... Please wait 5s.", "info");
+      
+      setTimeout(() => {
+        localUserData[task.id] = true;
+        localUserData.balance += task.reward;
+        localUserData.lifetimeEarnings += task.reward;
+        showNotification(`Verified! Received +${task.reward.toLocaleString()} Coins.`, "success");
+        renderTaskCatalog();
+        refreshUI();
+        saveState();
+      }, 5000);
+    };
+
+    // ----------------------------------------------------
+    // REFERRALS IMPLEMENTATION
+    // ----------------------------------------------------
+    UI.btnCopyLink.addEventListener('click', () => {
+      navigator.clipboard.writeText(UI.inputRefLink.value)
+        .then(() => showNotification("Referral link copied to clipboard!", "success"))
+        .catch(() => showNotification("Copy mechanism failed", "error"));
+    });
+
+    // ----------------------------------------------------
+    // LEADERBOARDS & VAULTS RANKS
+    // ----------------------------------------------------
+    function renderLeaderboards() {
+      const mockLeaders = [
+        { name: "Satoshi_Runner", balance: 1450000 },
+        { name: "Dev_App_Tester", balance: 680000 },
+        { name: "CryptoElite_01", balance: 250000 },
+        { name: "Web3_Warrior", balance: 120000 },
+        { name: "TapRush_Runner", balance: 45000 }
+      ];
+
+      UI.leaderboardContainer.innerHTML = "";
+      mockLeaders.forEach((leader, idx) => {
+        let textStyle = "text-slate-400";
+        if (idx === 0) textStyle = "text-yellow-400 font-black";
+        if (idx === 1) textStyle = "text-slate-300 font-black";
+        if (idx === 2) textStyle = "text-amber-600 font-black";
+
+        UI.leaderboardContainer.innerHTML += `
+          <div class="flex justify-between items-center px-4 py-3">
+            <div class="flex items-center space-x-3">
+              <span class="w-6 text-xs ${textStyle}">#${idx+1}</span>
+              <span class="text-xs text-slate-300 font-medium">${leader.name}</span>
+            </div>
+            <span class="text-xs font-extrabold text-white">${leader.balance.toLocaleString()} RUSH</span>
+          </div>
+        `;
+      });
+    }
+
+    // ----------------------------------------------------
+    // ACHIEVEMENT SYSTEMS
+    // ----------------------------------------------------
+    function evaluateBadgeAchievements() {
+      achievementCatalog[1].unlocked = localUserData.totalAdsWatched >= 1;
+      achievementCatalog[2].unlocked = localUserData.totalAdsWatched >= 10;
+      achievementCatalog[3].unlocked = localUserData.referralCount >= 1;
+
+      UI.achievementsGrid.innerHTML = "";
+      achievementCatalog.forEach(ach => {
+        const visualBorder = ach.unlocked ? "border-amber-500/20 bg-amber-500/5 text-amber-400" : "border-slate-800/80 bg-slate-900/20 text-slate-600";
+        UI.achievementsGrid.innerHTML += `
+          <div class="border p-3 rounded-xl flex flex-col items-center justify-center text-center ${visualBorder}">
+            <span class="text-lg mb-1">${ach.unlocked ? '🏆' : '🔒'}</span>
+            <p class="font-bold text-[10px] text-white leading-tight">${ach.title}</p>
+            <p class="text-[8px] text-slate-400 mt-1 leading-tight">${ach.desc}</p>
+          </div>
+        `;
+      });
+    }
+
+    // ----------------------------------------------------
+    // CLIENT SPA ROUTING UTILITIES
+    // ----------------------------------------------------
+    const navItems = document.querySelectorAll('.nav-item, .submenu-item');
+    navItems.forEach(item => {
+      item.addEventListener('click', () => {
+        const target = item.getAttribute('data-target');
+        if (target) {
+          switchScreen(target);
+          UI.moreSubmenu.classList.add('hidden');
+        }
+      });
+    });
+
+    UI.btnNavMore.addEventListener('click', (e) => {
+      e.stopPropagation();
+      UI.moreSubmenu.classList.toggle('hidden');
+    });
+
+    document.addEventListener('click', () => {
+      UI.moreSubmenu.classList.add('hidden');
+    });
+
+    function switchScreen(targetId) {
+      document.querySelectorAll('.view-panel').forEach(panel => panel.classList.add('hidden'));
+      document.getElementById(targetId).classList.remove('hidden');
+
+      navItems.forEach(btn => {
+        if (btn.getAttribute('data-target') === targetId) {
+          btn.classList.add('text-amber-500');
+          btn.classList.remove('text-slate-400');
+        } else {
+          btn.classList.remove('text-amber-500');
+          if (!btn.classList.contains('submenu-item')) {
+            btn.classList.add('text-slate-400');
+          }
+        }
+      });
+    }
+
+    // ----------------------------------------------------
+    // SYSTEM ADMINISTRATIVE PANEL HANDLERS
+    // ----------------------------------------------------
+    UI.btnAdminOfflineMode.addEventListener('click', () => {
+      CONFIG.isFirebaseActive = false;
+      showNotification("Active database switched to Local LocalStorage Storage Mode", "info");
+    });
+
+    UI.btnAdminInjectBalance.addEventListener('click', () => {
+      const injectVal = parseInt(UI.inputAdminCheat.value, 10) || 0;
+      localUserData.balance += injectVal;
+      localUserData.lifetimeEarnings += injectVal;
+      showNotification(`Successfully injected +${injectVal} Coins!`, "success");
+      refreshUI();
+      saveState();
+    });
+
+    // ----------------------------------------------------
+    // TOASTS, AUDIO AND HAPTIC TRIGGERS
+    // ----------------------------------------------------
+    function initializeDynamicRenders() {
+      renderStreakGrid();
+      renderTaskCatalog();
+      renderLeaderboards();
+      evaluateBadgeAchievements();
+      refreshUI();
+    }
+
+    function showNotification(text, type = "success") {
+      const toast = document.createElement('div');
+      let colors = "bg-green-600 text-white";
+      if (type === "error") colors = "bg-red-600 text-white";
+      if (type === "info") colors = "bg-slate-800 text-amber-400 border border-slate-700/80";
+
+      toast.className = `p-3 rounded-xl ${colors} font-bold text-xs shadow-xl flex items-center justify-between transition-all duration-300 pointer-events-auto transform translate-y-2 opacity-0`;
+      toast.innerHTML = `<span>${text}</span><button class="ml-4 font-black text-slate-400 text-[10px]" onclick="this.parentElement.remove()">✕</button>`;
+      
+      UI.toastContainer.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.remove('translate-y-2', 'opacity-0');
+      }, 50);
+
+      setTimeout(() => {
+        toast.classList.add('translate-y-2', 'opacity-0');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    function triggerHapticFeedback() {
+      if (!UI.chkHaptic.checked) return;
+      if (window.Telegram?.WebApp?.HapticFeedback) {
+        window.Telegram.WebApp.HapticFeedback.impactOccurred('medium');
+      }
+    }
+  </script>
+</body>
+</html>
